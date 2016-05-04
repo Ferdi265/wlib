@@ -1,0 +1,8 @@
+[package]
+name = "wtools"
+version = "0.1.0"
+authors = ["theFerdi265 <theferdi265@gmail.com>"]
+
+[dependencies.x11]
+version = "2.5.1"
+features = ["xlib"]

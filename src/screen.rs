@@ -1,17 +1,30 @@
+use std::mem;
 use x11::xlib;
 
-pub struct Screen {
-    pub(super) s: *mut xlib::Screen
+use super::display::Display;
+use super::window::Window;
+
+pub struct Screen<'a> {
+    pub(super) s: &'a xlib::Screen,
+    pub(super) d: &'a Display<'a>
 }
 
-impl Screen {
-    pub fn root(&self) -> xlib::Window {
-        unsafe { (*self.s).root }
+impl<'a> Screen<'a> {
+    pub fn root(&self) -> Window<'a> {
+        Window { w: self.s.root, d: self.d }
     }
     pub fn width(&self) -> i32 {
-        unsafe { (*self.s).width as i32 }
+        self.s.width as i32
     }
     pub fn height(&self) -> i32 {
-        unsafe { (*self.s).height as i32 }
+        self.s.height as i32
+    }
+}
+
+impl<'a> Drop for Screen<'a> {
+    // TODO: find out what XFree() returns
+    fn drop(&mut self) {
+        let r = unsafe { xlib::XFree(mem::transmute(self.s)) };
+        println!("XFree(screen) = {}", r);
     }
 }

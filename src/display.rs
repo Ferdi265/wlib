@@ -1,65 +1,53 @@
 use std::os::raw;
+use std::mem;
 use std::ptr;
 use std::ffi;
 use x11::xlib;
 
 use super::err::OrErrorStr;
-use super::err::IntoOrErrorStr;
 use super::screen::Screen;
 
-// Display wrapper struct
-pub struct Display {
-    pub(super) d: *mut xlib::Display
+pub struct Display<'a> {
+    pub(super) d: &'a xlib::Display
 }
 
-impl Display {
-    // calls XOpenDisplay()
-    //
-    // TODO: errors?
-    fn open_direct(dispname: *const raw::c_char) -> OrErrorStr<Display> {
-        let d = unsafe { xlib::XOpenDisplay(dispname) };
-        d.or_error_str("XOpenDisplay() failed: pointer is NULL").map(|d| Display { d: d })
+impl<'a> Display<'a> {
+    fn open_direct(dispname: *const raw::c_char) -> OrErrorStr<Display<'a>> {
+        let d = unsafe { xlib::XOpenDisplay(dispname).as_ref() };
+        d.map(|d| Display { d: d }).ok_or("XOpenDisplay() failed: pointer is NULL")
     }
-    // open the X Display named by dispname
-    pub fn open_named(dispname: &str) -> OrErrorStr<Display> {
+    pub fn open_named(dispname: &str) -> OrErrorStr<Display<'a>> {
         let cs = try!(
             ffi::CString::new(dispname)
                 .map_err(|_| "CString::new() failed: found NULL byte")
         );
         return Self::open_direct(cs.as_ptr());
     }
-    // open the X Display in $DISPLAY
-    pub fn open() -> OrErrorStr<Display> {
+    pub fn open() -> OrErrorStr<Display<'a>> {
         return Self::open_direct(ptr::null());
     }
-    // get the screen with number num
-    // calls XScreenOfDisplay()
-    pub fn screen_num(&self, screennum: i32) -> OrErrorStr<Screen> {
+    pub fn screen_num(&'a self, screennum: i32) -> OrErrorStr<Screen<'a>> {
         if screennum < 0 {
             return Err("screennum cannot be less than 0");
         }
-        let count = unsafe { xlib::XScreenCount(self.d) };
+        let count = unsafe { xlib::XScreenCount(mem::transmute(self.d)) };
         if screennum >= count {
             return Err("screennum greater than XScreenCount()");
         }
-        let s = unsafe { xlib::XScreenOfDisplay(self.d, screennum) };
-        s.or_error_str("XScreenOfDisplay() failed: pointer is NULL").map(|s| Screen { s: s })
+        let s = unsafe { xlib::XScreenOfDisplay(mem::transmute(self.d), screennum).as_ref() };
+        s.map(|s| Screen { s: s, d: self }).ok_or("XScreenOfDisplay() failed: pointer is NULL")
     }
-    // get the default screen
-    // calls XDefaultScreenOfDisplay()
-    pub fn screen(&self) -> OrErrorStr<Screen> {
-        let s = unsafe { xlib::XDefaultScreenOfDisplay(self.d) };
-        s.or_error_str("XDefaultScreenOfDisplay() failed: pointer is NULL").map(|s| Screen { s: s })
+    pub fn screen(&'a self) -> OrErrorStr<Screen<'a>> {
+        let s = unsafe { xlib::XDefaultScreenOfDisplay(mem::transmute(self.d)).as_ref() };
+        s.map(|s| Screen { s: s, d: self }).ok_or("XDefaultScreenOfDisplay() failed: pointer is NULL")
     }
 }
 
-impl Drop for Display {
-    // calls XCloseDisplay()
-    //
+impl<'a> Drop for Display<'a> {
     // NOTE: XCloseDisplay() is hardcoded to return 0, so ignore it
     //
-    // TODO: man page talks about errors?
+    // TODO: this crashes the program if there are errors. Maybe handle them?
     fn drop(&mut self) {
-        unsafe { xlib::XCloseDisplay(self.d) };
+        unsafe { xlib::XCloseDisplay(mem::transmute(self.d)) };
     }
 }

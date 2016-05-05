@@ -1,7 +1,7 @@
 use std::io::Write;
 use std::process;
 
-pub type OrErrorStr<T> = Result<T, &'static str>;
+// PRIVATE
 
 // error handling sugar
 pub(super) trait IntoOrErrorStr<T> where T: Sized {
@@ -37,7 +37,11 @@ macro_rules! println_stderr(
     } }
 );
 
-// error handling util
+// PUBLIC
+
+pub type OrErrorStr<T> = Result<T, &'static str>;
+
+// error handling util for downstream
 pub fn handle_err(e: OrErrorStr<()>) {
     if let Err(e) = e {
         println_stderr!("Error: {}", e);

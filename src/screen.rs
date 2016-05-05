@@ -13,11 +13,11 @@ impl<'a> Screen<'a> {
     pub fn root(&self) -> Window<'a> {
         Window { w: self.s.root, d: self.d }
     }
-    pub fn width(&self) -> i32 {
-        self.s.width as i32
+    pub fn width(&self) -> u16 {
+        self.s.width as u16
     }
-    pub fn height(&self) -> i32 {
-        self.s.height as i32
+    pub fn height(&self) -> u16 {
+        self.s.height as u16
     }
 }
 

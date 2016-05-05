@@ -6,6 +6,7 @@ use x11::xlib;
 
 use super::err::OrErrorStr;
 use super::screen::Screen;
+use super::window::Window;
 
 pub struct Display<'a> {
     pub(super) d: &'a xlib::Display
@@ -40,6 +41,12 @@ impl<'a> Display<'a> {
     pub fn screen(&'a self) -> OrErrorStr<Screen<'a>> {
         let s = unsafe { xlib::XDefaultScreenOfDisplay(mem::transmute(self.d)).as_ref() };
         s.map(|s| Screen { s: s, d: self }).ok_or("XDefaultScreenOfDisplay() failed: pointer is NULL")
+    }
+    pub fn window(&'a self, id: u64) -> Window<'a> {
+        Window {
+            w: id as xlib::Window,
+            d: self
+        }
     }
 }
 

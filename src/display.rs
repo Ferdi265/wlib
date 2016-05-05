@@ -42,11 +42,8 @@ impl<'a> Display<'a> {
         let s = unsafe { xlib::XDefaultScreenOfDisplay(mem::transmute(self.d)).as_ref() };
         s.map(|s| Screen { s: s, d: self }).ok_or("XDefaultScreenOfDisplay() failed: pointer is NULL")
     }
-    pub fn window(&'a self, id: u64) -> Window<'a> {
-        Window {
-            w: id as xlib::Window,
-            d: self
-        }
+    pub fn window(&'a self, id: u64) -> OrErrorStr<Window<'a>> {
+        Window::new(self, id)
     }
 }
 

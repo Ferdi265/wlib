@@ -1,6 +1,7 @@
 use std::mem;
 use x11::xlib;
 
+use super::err::OrErrorStr;
 use super::display::Display;
 use super::window::Window;
 
@@ -10,8 +11,8 @@ pub struct Screen<'a> {
 }
 
 impl<'a> Screen<'a> {
-    pub fn root(&self) -> Window<'a> {
-        Window { w: self.s.root, d: self.d }
+    pub fn root(&self) -> OrErrorStr<Window<'a>> {
+        Window::new(self.d, self.s.root)
     }
     pub fn width(&self) -> u16 {
         self.s.width as u16
@@ -22,9 +23,11 @@ impl<'a> Screen<'a> {
 }
 
 impl<'a> Drop for Screen<'a> {
-    // TODO: find out what XFree() returns
     fn drop(&mut self) {
         let r = unsafe { xlib::XFree(mem::transmute(self.s)) };
-        println!("XFree(screen) = {}", r);
+        // NOTE: 0 is error
+        if r == 0 {
+            panic!("XFree() failed: return was 0")   
+        }
     }
 }

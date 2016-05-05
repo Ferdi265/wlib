@@ -1,9 +1,12 @@
 extern crate wtools;
 
+fn run() -> wtools::OrErrorStr<()> {
+    let disp = try!(wtools::Display::open());
+    let scrn = try!(disp.screen());
+    println!("Got {}x{} Screen with root = 0x{:x}", scrn.width(), scrn.height(), scrn.root());
+    Ok(())
+}
+
 fn main() {
-    let disp = wtools::Display::open();
-    println!("{}", match disp {
-        Ok(_) => "YaY, it works!".to_string(),
-        Err(s) => format!("Doesn't work: {}", s)
-    });
+   wtools::handle_err(run()); 
 }

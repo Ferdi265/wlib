@@ -42,7 +42,7 @@ macro_rules! println_stderr(
 pub type OrErrorStr<T> = Result<T, &'static str>;
 
 // error handling util for downstream
-pub fn handle_err(e: OrErrorStr<()>) {
+pub fn handle_error(e: OrErrorStr<()>) {
     if let Err(e) = e {
         println_stderr!("Error: {}", e);
         process::exit(1);

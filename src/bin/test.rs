@@ -8,5 +8,5 @@ fn run() -> wtools::OrErrorStr<()> {
 }
 
 fn main() {
-   wtools::handle_err(run()); 
+   wtools::handle_error(run());
 }

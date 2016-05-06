@@ -1,6 +1,6 @@
 extern crate wtools;
 
-fn run() -> wtools::OrErrorStr<()> {
+fn run() -> wtools::OrError<()> {
     let disp = try!(wtools::Display::open());
     let scrn = try!(disp.screen());
     let root = try!(scrn.root());
@@ -12,5 +12,5 @@ fn run() -> wtools::OrErrorStr<()> {
 }
 
 fn main() {
-   wtools::handle_error(run());
+   wtools::handle_error("test", 1, run());
 }

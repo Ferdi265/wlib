@@ -10,6 +10,28 @@ enum Mode {
     Absolute
 }
 
+fn parse(args: Vec<String>) -> wtools::OrError<(i32, i32, u64)> {
+    if args.len() != 3 {
+        return Err("missing or extraneous arguments".to_string());
+    }
+
+    let x = try!(args[0].parse().map_err(|_| "x is not a number".to_string()));
+    let y = try!(args[1].parse().map_err(|_| "y is not a number".to_string()));
+    let w = try!(wtools::parse_hex(&args[2]).ok_or("w is not a hexadecimal number".to_string()));
+
+    Ok((x, y, w))
+}
+
+fn run(x: i32, y: i32, w: u64, mode: Mode) -> wtools::OrError<()> {
+    let disp = try!(wtools::Display::open());
+    let mut win = try!(disp.window(w));
+    match mode {
+        Mode::Relative => try!(win.position_relative(x, y)),
+        Mode::Absolute => try!(win.position(x, y))
+    }
+    Ok(())
+}
+
 fn main() {
     let (name, args) = wtools::number_args();
     
@@ -34,14 +56,7 @@ fn main() {
     } else {
         Mode::Relative
     };
-    
-    if matches.free.len() != 3 {
-        println_stderr!("{}: missing or extraneous arguments", name);
-        process::exit(1);
-    }
-    
-    println!("Mode: {}", match mode {
-        Mode::Relative => "rel",
-        Mode::Absolute => "abs"
-    });
+
+    let (x, y, w) = wtools::handle_error(&name, 1, parse(matches.free));
+    wtools::handle_error(&name, 2, run(x, y, w, mode));
 }

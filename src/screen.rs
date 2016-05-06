@@ -1,7 +1,7 @@
 use std::mem;
 use x11::xlib;
 
-use super::err::OrErrorStr;
+use super::err::OrError;
 use super::display::Display;
 use super::window::Window;
 
@@ -11,7 +11,7 @@ pub struct Screen<'a> {
 }
 
 impl<'a> Screen<'a> {
-    pub fn root(&self) -> OrErrorStr<Window<'a>> {
+    pub fn root(&self) -> OrError<Window<'a>> {
         Window::new(self.d, self.s.root)
     }
     pub fn width(&self) -> u16 {

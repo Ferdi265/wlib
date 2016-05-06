@@ -1,18 +1,9 @@
 use std::io::Write;
-use std::process;
 use x11::xlib;
 
 // PUBLIC
 
-pub type OrErrorStr<T> = Result<T, &'static str>;
-
-// error handling util for downstream
-pub fn handle_error(e: OrErrorStr<()>) {
-    if let Err(e) = e {
-        println_stderr!("Error: {}", e);
-        process::exit(1);
-    }
-}
+pub type OrError<T> = Result<T, String>;
 
 #[macro_export]
 macro_rules! println_stderr(

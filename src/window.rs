@@ -15,35 +15,63 @@ impl<'a> Window<'a> {
         let mut w = Window {
             w: id,
             d: d,
-            attrs: unsafe { mem::zeroed() }
+            attrs: unsafe {
+                mem::zeroed()
+            }
         };
-        let r = unsafe { xlib::XGetWindowAttributes(mem::transmute(w.d.d), w.w, &mut w.attrs) };
-        // NOTE: 0 is error
-        if r == 0 {
-            Err("XGetWindowAttributes() failed: return was 0")
+        w.update_attrs().map(|_| w)
+    }
+    pub(super) fn update_attrs(&mut self) -> OrErrorStr<()> {
+        let ok = unsafe {
+            xlib::XGetWindowAttributes(mem::transmute(self.d.d), self.w, &mut self.attrs) == 1
+        };
+        if ok {
+            Ok(())
         } else {
-            Ok(w)
+            Err("XGetWindowAttributes() failed: return was 0")
         }
     }
     pub fn id(&self) -> i32 {
         self.w as i32
     }
-    pub fn position(&self, x: i32, y: i32) -> OrErrorStr<()> {
-        let r = unsafe { xlib::XMoveWindow(mem::transmute(self.d.d), self.w, x, y) };
-        // NOTE: 0 is error
-        if r == 0 {
-            Err("XMoveWindow() failed: return was 0")
+    pub fn position(&mut self, x: i32, y: i32) -> OrErrorStr<()> {
+        let ok = unsafe {
+            xlib::XMoveWindow(mem::transmute(self.d.d), self.w, x, y) == 1
+        };
+        if ok {
+            self.update_attrs()
         } else {
-            Ok(())
+            Err("XMoveWindow() failed: return was 0")
         }
     }
-    pub fn resize(&self, w: u16, h: u16) -> OrErrorStr<()> {
-        let r = unsafe { xlib::XResizeWindow(mem::transmute(self.d.d), self.w, w as u32, h as u32) };
-        // NOTE: 0 is error
-        if r == 0 {
-            Err("XResizeWindow() failed: return was 0")
+    pub fn position_relative(&mut self, x: i32, y: i32) -> OrErrorStr<()> {
+        let x = self.attrs.x + x;
+        let y = self.attrs.y + y;
+        self.position(x, y)
+    }
+    pub fn resize(&mut self, w: u16, h: u16) -> OrErrorStr<()> {
+        let ok = unsafe {
+            xlib::XResizeWindow(mem::transmute(self.d.d), self.w, w as u32, h as u32) == 1
+        };
+        if ok {
+            self.update_attrs()
         } else {
-            Ok(())
+            Err("XResizeWindow() failed: return was 0")
+        }
+    }
+    pub fn resize_relative(&mut self, w: i32, h: i32) -> OrErrorStr<()> {
+        if self.attrs.width + w < 0 {
+            Err("resulting width less than 0")
+        } else if self.attrs.width + w > u16::max_value() as i32 {
+            Err("resulting width greater than u16::MAX")
+        } else if self.attrs.height + h < 0 {
+            Err("resulting height less than 0")
+        } else if self.attrs.height + w > u16::max_value() as i32 {
+            Err("resulting height greater than u16::MAX")
+        } else {
+            let w = self.attrs.width + w;
+            let h = self.attrs.height + h;
+            self.resize(w as u16, h as u16)
         }
     }
 }

@@ -24,9 +24,10 @@ impl<'a> Screen<'a> {
 
 impl<'a> Drop for Screen<'a> {
     fn drop(&mut self) {
-        let r = unsafe { xlib::XFree(mem::transmute(self.s)) };
-        // NOTE: 0 is error
-        if r == 0 {
+        let ok = unsafe {
+            xlib::XFree(mem::transmute(self.s)) == 1
+        };
+        if !ok {
             panic!("XFree() failed: return was 0")   
         }
     }

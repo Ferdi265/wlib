@@ -15,8 +15,11 @@ pub struct Display<'a> {
 
 impl<'a> Display<'a> {
     fn open_direct(dispname: *const raw::c_char) -> OrErrorStr<Display<'a>> {
-        let d = unsafe { xlib::XOpenDisplay(dispname).as_ref() };
-        unsafe { xlib::XSetErrorHandler(Some(x_error_handler)) };
+        let d = unsafe {
+            // NOTE: register handler to avoid crashes
+            xlib::XSetErrorHandler(Some(x_error_handler));
+            xlib::XOpenDisplay(dispname).as_ref()
+        };
         d.map(|d| Display { d: d }).ok_or("XOpenDisplay() failed: pointer is NULL")
     }
     pub fn open_named(dispname: &str) -> OrErrorStr<Display<'a>> {
@@ -31,17 +34,23 @@ impl<'a> Display<'a> {
     }
     pub fn screen_num(&'a self, screennum: i32) -> OrErrorStr<Screen<'a>> {
         if screennum < 0 {
-            return Err("screennum cannot be less than 0");
+            return Err("screennum less than 0");
         }
-        let count = unsafe { xlib::XScreenCount(mem::transmute(self.d)) };
+        let count = unsafe {
+            xlib::XScreenCount(mem::transmute(self.d))
+        };
         if screennum >= count {
             return Err("screennum greater than XScreenCount()");
         }
-        let s = unsafe { xlib::XScreenOfDisplay(mem::transmute(self.d), screennum).as_ref() };
+        let s = unsafe {
+            xlib::XScreenOfDisplay(mem::transmute(self.d), screennum).as_ref()
+        };
         s.map(|s| Screen { s: s, d: self }).ok_or("XScreenOfDisplay() failed: pointer is NULL")
     }
     pub fn screen(&'a self) -> OrErrorStr<Screen<'a>> {
-        let s = unsafe { xlib::XDefaultScreenOfDisplay(mem::transmute(self.d)).as_ref() };
+        let s = unsafe {
+            xlib::XDefaultScreenOfDisplay(mem::transmute(self.d)).as_ref()
+        };
         s.map(|s| Screen { s: s, d: self }).ok_or("XDefaultScreenOfDisplay() failed: pointer is NULL")
     }
     pub fn window(&'a self, id: u64) -> OrErrorStr<Window<'a>> {
@@ -50,10 +59,10 @@ impl<'a> Display<'a> {
 }
 
 impl<'a> Drop for Display<'a> {
-    // NOTE: XCloseDisplay() is hardcoded to return 0, so ignore it
-    //
-    // TODO: this crashes the program if there are errors. Maybe handle them?
     fn drop(&mut self) {
-        unsafe { xlib::XCloseDisplay(mem::transmute(self.d)) };
+        unsafe {
+            // NOTE: XCloseDisplay() is hardcoded to return 0, so ignore it
+            xlib::XCloseDisplay(mem::transmute(self.d));
+        }
     }
 }

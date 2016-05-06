@@ -2,7 +2,7 @@ use std::io::Write;
 use std::process;
 use std::path;
 use std::env;
-use super::OrError;
+use super::err::Result;
 
 fn prefix_number(args: &mut Vec<String>) {
     for i in 0..args.len() {
@@ -54,7 +54,7 @@ pub fn parse_hex(h: &str) -> Option<u64> {
     }
 }
 
-pub fn handle_error<T>(name: &str, code: i32, r: OrError<T>) -> T {
+pub fn handle_error<T>(name: &str, code: i32, r: Result<T>) -> T {
     match r {
         Ok(t) => t,
         Err(e) => {

@@ -1,9 +1,6 @@
-use std::io::Write;
-use x11::xlib;
+use std::result;
 
-// PUBLIC
-
-pub type OrError<T> = Result<T, String>;
+pub type Result<T> = result::Result<T, &'static str>;
 
 #[macro_export]
 macro_rules! println_stderr(
@@ -12,11 +9,3 @@ macro_rules! println_stderr(
         r.expect("failed printing to stderr");
     } }
 );
-
-// PRIVATE
-
-pub(super) unsafe extern "C" fn x_error_handler(_: *mut xlib::Display, err: *mut xlib::XErrorEvent) -> i32 {
-    let e = *err;
-    println_stderr!("Error: code: {}", e.error_code);
-    0
-}

@@ -34,7 +34,7 @@ impl<'a> Drop for Screen<'a> {
             xlib::XFree(mem::transmute(self.s)) == 1
         };
         if !ok {
-            panic!("XFree() failed: return was 0")   
+            panic!("XFree() failed");
         }
     }
 }

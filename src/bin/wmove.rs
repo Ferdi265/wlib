@@ -19,12 +19,13 @@ fn main() {
     wtools::handle_error(&name, 2, run(x, y, w, mode));
 }
 
-fn parse(r: getopts::Result<getopts::Matches>) -> wtools::Result<(i32, i32, u64, Mode)> {
+fn parse(r: getopts::Result) -> wtools::Result<(i32, i32, u64, Mode)> {
     let matches = try!(r.map_err(|e| match e {
-        getopts::Fail::UnrecognizedOption => "unrecognized option",
-        getopts::Fail::OptionDuplicated => "option duplicated",
-        _ => unreachable!("how the hell...?")
+        getopts::Fail::UnrecognizedOption(_) => "unrecognized option",
+        getopts::Fail::OptionDuplicated(_) => "option duplicated",
+        _ => unreachable!()
     }));
+
     let mode = try!(if matches.opt_present("r") && matches.opt_present("a") {
         Err("cannot have both -r and -a")
     } else if matches.opt_present("a") {
@@ -32,6 +33,8 @@ fn parse(r: getopts::Result<getopts::Matches>) -> wtools::Result<(i32, i32, u64,
     } else {
         Ok(Mode::Relative)
     });
+
+    let args = matches.free;
 
     if args.len() != 3 {
         return Err("missing or extraneous arguments");
@@ -41,7 +44,7 @@ fn parse(r: getopts::Result<getopts::Matches>) -> wtools::Result<(i32, i32, u64,
     let y = try!(args[1].parse().ok().ok_or("y is not a number"));
     let w = try!(wtools::parse_hex(&args[2]).ok_or("w is not a hexadecimal number"));
 
-    Ok((x, y, w))
+    Ok((x, y, w, mode))
 }
 
 fn run(x: i32, y: i32, w: u64, mode: Mode) -> wtools::Result<()> {

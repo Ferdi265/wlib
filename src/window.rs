@@ -28,7 +28,7 @@ impl<'a> Window<'a> {
         if ok {
             Ok(())
         } else {
-            Err("XGetWindowAttributes() failed: return was 0")
+            Err("XGetWindowAttributes() failed")
         }
     }
     pub fn id(&self) -> i32 {
@@ -41,7 +41,7 @@ impl<'a> Window<'a> {
         if ok {
             self.update_attrs()
         } else {
-            Err("XMoveWindow() failed: return was 0")
+            Err("XMoveWindow() failed")
         }
     }
     pub fn position_relative(&mut self, x: i32, y: i32) -> Result<()> {
@@ -56,7 +56,7 @@ impl<'a> Window<'a> {
         if ok {
             self.update_attrs()
         } else {
-            Err("XResizeWindow() failed: return was 0")
+            Err("XResizeWindow() failed")
         }
     }
     pub fn resize_relative(&mut self, w: i32, h: i32) -> Result<()> {

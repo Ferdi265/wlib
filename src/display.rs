@@ -5,6 +5,7 @@ use std::ffi;
 use x11::xlib;
 
 use super::err::OrErrorStr;
+use super::err::x_error_handler;
 use super::screen::Screen;
 use super::window::Window;
 
@@ -15,6 +16,7 @@ pub struct Display<'a> {
 impl<'a> Display<'a> {
     fn open_direct(dispname: *const raw::c_char) -> OrErrorStr<Display<'a>> {
         let d = unsafe { xlib::XOpenDisplay(dispname).as_ref() };
+        unsafe { xlib::XSetErrorHandler(Some(x_error_handler)) };
         d.map(|d| Display { d: d }).ok_or("XOpenDisplay() failed: pointer is NULL")
     }
     pub fn open_named(dispname: &str) -> OrErrorStr<Display<'a>> {

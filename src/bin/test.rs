@@ -7,6 +7,7 @@ fn run() -> wtools::OrErrorStr<()> {
     println!("Got {}x{} Screen with root = 0x{:x}", scrn.width(), scrn.height(), root.id());
     let win = try!(disp.window(0x00e00009));
     try!(win.position(10, 10));
+    try!(win.resize(500, 400));
     Ok(())
 }
 

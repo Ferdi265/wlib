@@ -1,5 +1,6 @@
 use std::io::Write;
 use std::process;
+use x11::xlib;
 
 // PRIVATE
 
@@ -9,6 +10,12 @@ macro_rules! println_stderr(
         r.expect("failed printing to stderr");
     } }
 );
+
+pub(super) unsafe extern "C" fn x_error_handler(_: *mut xlib::Display, err: *mut xlib::XErrorEvent) -> i32 {
+    let e = *err;
+    println_stderr!("Error: code: {}", e.error_code);
+    0
+}
 
 // PUBLIC
 

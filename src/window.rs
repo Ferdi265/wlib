@@ -37,4 +37,13 @@ impl<'a> Window<'a> {
             Ok(())
         }
     }
+    pub fn resize(&self, w: u16, h: u16) -> OrErrorStr<()> {
+        let r = unsafe { xlib::XResizeWindow(mem::transmute(self.d.d), self.w, w as u32, h as u32) };
+        // NOTE: 0 is error
+        if r == 0 {
+            Err("XResizeWindow() failed: return was 0")
+        } else {
+            Ok(())
+        }
+    }
 }

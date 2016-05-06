@@ -20,11 +20,11 @@ impl<'a> Screen<'a> {
     pub fn root(&self) -> Result<Window<'a>> {
         Window::new(self.d, self.s.root)
     }
-    pub fn width(&self) -> u16 {
-        self.s.width as u16
+    pub fn width(&self) -> i32 {
+        self.s.width
     }
-    pub fn height(&self) -> u16 {
-        self.s.height as u16
+    pub fn height(&self) -> i32 {
+        self.s.height
     }
 }
 

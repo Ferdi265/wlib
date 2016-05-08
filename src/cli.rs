@@ -67,7 +67,7 @@ fn prefix_number(args: &mut Vec<String>) {
     for i in 0..args.len() {
         let (notopt, num) = {
             let mut cs = args[i].chars();
-            let opt = cs.next() != Some('-');
+            let opt = cs.next() == Some('-');
             let num = opt && match cs.next() {
                 None => false,
                 Some(c) => c >= '0' && c <= '9'

@@ -90,7 +90,7 @@ impl str::FromStr for WindowID {
         if is {
             u64::from_str_radix(&hex, 16).map_err(|_| "not a hexadecimal number").map(|u| u.into())
         } else {
-            u64::from_str_radix(&hex, 10).map_err(|_| "not a decimal number").map(|u| u.into())
+            Err("not a hexadecimal number")
         }
     }
 }

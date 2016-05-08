@@ -22,8 +22,8 @@ fn main() {
             ("x", "x coordinate"),
         arg y: i32 = 0,
             ("y", "y coordinate"),
-        arg win: wtools::WindowID = 0x0.into(),
-            ("win", "XServer window id")
+        arg win: wtools::WindowID = 0.into(),
+            ("win", "XServer window id (hexadecimal)")
     }
 
     cli::handle_error(&name, 1, run(mode, x, y, win));

@@ -3,6 +3,7 @@ use std::path;
 use std::env;
 use std::fmt;
 
+/// A macro like `println!` that writes to `stderr` instead
 #[macro_export]
 macro_rules! println_stderr {
     ($($arg:tt)*) => {{
@@ -12,6 +13,7 @@ macro_rules! println_stderr {
     }}
 }
 
+/// A macro that uses the `argparse` crate to parse cmdline arguments
 #[macro_export]
 macro_rules! parse_args {
     {
@@ -83,6 +85,7 @@ fn prefix_number(args: &mut Vec<String>) {
     }
 }
 
+/// Returns the basename of the running program
 pub fn name(a: &mut env::Args) -> String {
     let path = a.next().unwrap();
     let filename = path::Path::new(&path).file_name().unwrap();
@@ -90,6 +93,7 @@ pub fn name(a: &mut env::Args) -> String {
     name
 }
 
+/// Returns the arguments and the basename of the running program
 pub fn args() -> (String, Vec<String>) {
     let mut a = env::args();
     let name = name(&mut a);
@@ -97,27 +101,17 @@ pub fn args() -> (String, Vec<String>) {
     (name, args)
 }
 
+/// Returns the arguments and the basename of the rinning program
+///
+/// Inserts a `--` argument before the first argument that looks like a
+/// negative number. Stops if it finds a non-option argument.
 pub fn number_args() -> (String, Vec<String>) {
     let (name, mut args) = args();
     prefix_number(&mut args);
     (name, args)
 }
 
-pub fn parse_hex(h: &str) -> Option<u64> {
-    let mut hex = h.to_string();
-    let is = if hex.len() < 3 {
-        false
-    } else {
-        let pre: String = hex.drain(..2).collect();
-        pre == "0x".to_string()
-    };
-    if is {
-        u64::from_str_radix(&hex, 16).ok()
-    } else {
-        None
-    }
-}
-
+/// TODO
 pub fn handle_error<T, E: fmt::Display>(name: &str, code: i32, r: Result<T, E>) -> T {
     match r {
         Ok(t) => t,

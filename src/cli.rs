@@ -14,6 +14,38 @@ macro_rules! println_stderr {
 }
 
 /// A macro that uses the `argparse` crate to parse cmdline arguments
+///
+/// # Example
+/// ```
+/// # #[macro_use]
+/// # extern crate wtools;
+/// # use wtools::WindowID;
+/// # fn main() {
+/// # std::process::exit(0);
+/// #[derive(Copy, Clone, Debug)]
+/// enum Mode {
+///     Relative,
+///     Absolute
+/// }
+///
+/// parse_args!{
+///     description: "a cli utility",
+///     opt mode: Mode = Mode::Relative,
+///         (&["-r", "--relative"], Mode::Relative, "do sth relatively"),
+///         (&["-r", "--absolute"], Mode::Absolute, "do sth absolutely"),
+///     arg x: i32 = 0,
+///         ("x", "x coordinate"),
+///     arg y: i32 = 0,
+///         ("y", "y coordinate"),
+///     arg wid: WindowID = 0.into(),
+///         ("wid", "XServer window id (hexadecimal)")
+/// }
+///
+/// let id: u64 = wid.into();
+///
+/// println!("mode: {:?}, x: {}, y: {}, wid: {}", mode, x, y, id);
+/// # }
+/// ```
 #[macro_export]
 macro_rules! parse_args {
     {

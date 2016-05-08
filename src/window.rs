@@ -3,7 +3,77 @@ use std::str;
 use std::mem;
 use x11::xlib;
 
-use super::display::Display;
+pub struct Window<'a> {
+    w: u64,
+    d: &'a xlib::Display,
+    attrs: xlib::XWindowAttributes
+}
+
+impl<'a> Window<'a> {
+    pub(super) fn new(d: &'a xlib::Display, id: WindowID) -> Result<Window<'a>, &'static str> {
+        let mut w = Window {
+            w: id.into(),
+            d: d,
+            attrs: unsafe {
+                mem::zeroed()
+            }
+        };
+        w.update_attrs().map(|_| w)
+    }
+    fn update_attrs(&mut self) -> Result<(), &'static str> {
+        let ok = unsafe {
+            xlib::XGetWindowAttributes(mem::transmute(self.d), self.w, &mut self.attrs) == 1
+        };
+        if ok {
+            Ok(())
+        } else {
+            Err("XGetWindowAttributes() failed")
+        }
+    }
+    pub fn id(&self) -> WindowID {
+        self.w.into()
+    }
+    pub fn position(&mut self, x: i32, y: i32) -> Result<(), &'static str> {
+        let ok = unsafe {
+            xlib::XMoveWindow(mem::transmute(self.d), self.w, x, y) == 1
+        };
+        if ok {
+            self.update_attrs()
+        } else {
+            Err("XMoveWindow() failed")
+        }
+    }
+    pub fn position_relative(&mut self, x: i32, y: i32) -> Result<(), &'static str> {
+        let x = self.attrs.x + x;
+        let y = self.attrs.y + y;
+        self.position(x, y)
+    }
+    pub fn resize(&mut self, w: i32, h: i32) -> Result<(), &'static str> {
+        if w < 0 {
+            return Err("width less than 0");
+        } else if w > u16::max_value() as i32 {
+            return Err("width greater than u16::max_alue()");
+        } else if h < 0 {
+            return Err("height less than 0");
+        } else if w > u16::max_value() as i32 {
+            return Err("height greater than u16::max_value()");
+        }
+
+        let ok = unsafe {
+            xlib::XResizeWindow(mem::transmute(self.d), self.w, w as u32, h as u32) == 1
+        };
+        if ok {
+            self.update_attrs()
+        } else {
+            Err("XResizeWindow() failed")
+        }
+    }
+    pub fn resize_relative(&mut self, w: i32, h: i32) -> Result<(), &'static str> {
+        let w = self.attrs.width + w;
+        let h = self.attrs.height + h;
+        self.resize(w, h)
+    }
+}
 
 pub struct WindowID(u64);
 
@@ -31,80 +101,8 @@ impl convert::From<u64> for WindowID {
     }
 }
 
-impl convert::From<WindowID> for u64 {
-    fn from(w: WindowID) -> u64 {
-        w.0
-    }
-}
-
-pub struct Window<'a> {
-    w: u64,
-    d: &'a Display<'a>,
-    attrs: xlib::XWindowAttributes
-}
-
-impl<'a> Window<'a> {
-    pub(super) fn new(d: &'a Display<'a>, id: WindowID) -> Result<Window<'a>, &'static str> {
-        let mut w = Window {
-            w: id.into(),
-            d: d,
-            attrs: unsafe {
-                mem::zeroed()
-            }
-        };
-        w.update_attrs().map(|_| w)
-    }
-    fn update_attrs(&mut self) -> Result<(), &'static str> {
-        let ok = unsafe {
-            xlib::XGetWindowAttributes(mem::transmute(self.d.d), self.w, &mut self.attrs) == 1
-        };
-        if ok {
-            Ok(())
-        } else {
-            Err("XGetWindowAttributes() failed")
-        }
-    }
-    pub fn id(&self) -> u64 {
-        self.w.into()
-    }
-    pub fn position(&mut self, x: i32, y: i32) -> Result<(), &'static str> {
-        let ok = unsafe {
-            xlib::XMoveWindow(mem::transmute(self.d.d), self.w, x, y) == 1
-        };
-        if ok {
-            self.update_attrs()
-        } else {
-            Err("XMoveWindow() failed")
-        }
-    }
-    pub fn position_relative(&mut self, x: i32, y: i32) -> Result<(), &'static str> {
-        let x = self.attrs.x + x;
-        let y = self.attrs.y + y;
-        self.position(x, y)
-    }
-    pub fn resize(&mut self, w: i32, h: i32) -> Result<(), &'static str> {
-        if w < 0 {
-            return Err("width less than 0");
-        } else if w > u16::max_value() as i32 {
-            return Err("width greater than u16::max_alue()");
-        } else if h < 0 {
-            return Err("height less than 0");
-        } else if w > u16::max_value() as i32 {
-            return Err("height greater than u16::max_value()");
-        }
-
-        let ok = unsafe {
-            xlib::XResizeWindow(mem::transmute(self.d.d), self.w, w as u32, h as u32) == 1
-        };
-        if ok {
-            self.update_attrs()
-        } else {
-            Err("XResizeWindow() failed")
-        }
-    }
-    pub fn resize_relative(&mut self, w: i32, h: i32) -> Result<(), &'static str> {
-        let w = self.attrs.width + w;
-        let h = self.attrs.height + h;
-        self.resize(w, h)
+impl convert::Into<u64> for WindowID {
+    fn into(self) -> u64 {
+        self.0
     }
 }

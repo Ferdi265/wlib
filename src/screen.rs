@@ -1,16 +1,15 @@
 use std::mem;
 use x11::xlib;
 
-use super::display::Display;
-use super::window::Window;
+use super::Window;
 
 pub struct Screen<'a> {
-    d: &'a Display<'a>,
+    d: &'a xlib::Display,
     s: &'a xlib::Screen
 }
 
 impl<'a> Screen<'a> {
-    pub(super) fn new(d: &'a Display<'a>, s: &'a xlib::Screen) -> Screen<'a> {
+    pub(super) fn new(d: &'a xlib::Display, s: &'a xlib::Screen) -> Screen<'a> {
         Screen {
             d: d,
             s: s

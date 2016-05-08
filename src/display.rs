@@ -4,11 +4,11 @@ use std::ptr;
 use std::ffi;
 use x11::xlib;
 
-use super::screen::Screen;
-use super::window::Window;
-use super::window::WindowID;
+use super::Screen;
+use super::Window;
+use super::WindowID;
 
-pub(super) unsafe extern "C" fn x_noop_error_handler(_: *mut xlib::Display, _: *mut xlib::XErrorEvent) -> i32 {
+unsafe extern "C" fn x_noop_error_handler(_: *mut xlib::Display, _: *mut xlib::XErrorEvent) -> i32 {
     0
 }
 
@@ -48,16 +48,16 @@ impl<'a> Display<'a> {
         let s = unsafe {
             xlib::XScreenOfDisplay(mem::transmute(self.d), screennum).as_ref()
         };
-        s.map(|s| Screen::new(self, s)).ok_or("XScreenOfDisplay() failed: pointer is NULL")
+        s.map(|s| Screen::new(self.d, s)).ok_or("XScreenOfDisplay() failed: pointer is NULL")
     }
     pub fn screen(&'a self) -> Result<Screen<'a>, &'static str> {
         let s = unsafe {
             xlib::XDefaultScreenOfDisplay(mem::transmute(self.d)).as_ref()
         };
-        s.map(|s| Screen::new(self, s)).ok_or("XDefaultScreenOfDisplay() failed: pointer is NULL")
+        s.map(|s| Screen::new(self.d, s)).ok_or("XDefaultScreenOfDisplay() failed: pointer is NULL")
     }
     pub fn window(&'a self, id: WindowID) -> Result<Window<'a>, &'static str> {
-        Window::new(self, id)
+        Window::new(self.d, id)
     }
 }
 

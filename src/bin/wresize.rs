@@ -26,7 +26,7 @@ fn main() {
             ("win", "XServer window id")
     }
 
-    cli::handle_error(&name, 2, run(mode, x, y, win));
+    cli::handle_error(&name, 1, run(mode, x, y, win));
 }
 
 fn run(mode: Mode, x: i32, y: i32, w: wtools::WindowID) -> Result<(), &'static str> {

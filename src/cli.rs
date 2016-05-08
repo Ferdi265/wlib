@@ -133,7 +133,7 @@ pub fn args() -> (String, Vec<String>) {
     (name, args)
 }
 
-/// Returns the arguments and the basename of the rinning program
+/// Returns the arguments and the basename of the running program
 ///
 /// Inserts a `--` argument before the first argument that looks like a
 /// negative number. Stops if it finds a non-option argument.

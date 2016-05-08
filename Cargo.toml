@@ -7,5 +7,5 @@ authors = ["theFerdi265 <theferdi265@gmail.com>"]
 version = "2.5.1"
 features = ["xlib"]
 
-[dependencies.getopts]
-version = "0.2.14"
+[dependencies.argparse]
+version = "0.2.1"

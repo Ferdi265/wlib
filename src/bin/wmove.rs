@@ -1,55 +1,39 @@
-extern crate getopts;
+#[macro_use]
 extern crate wtools;
 
+use std::env;
+use wtools::cli;
+
+#[derive(Copy, Clone)]
 enum Mode {
     Relative,
     Absolute
 }
 
 fn main() {
-    let (name, args) = wtools::number_args();
+    let name = cli::name(&mut env::args());
 
-    let mut opts = getopts::Options::new();
-    opts.parsing_style(getopts::ParsingStyle::StopAtFirstFree);
-    opts.optflag("r", "relative", "");
-    opts.optflag("a", "absolute", "");
-    let r = opts.parse(args);
-
-    let (x, y, w, mode) = wtools::handle_error(&name, 1, parse(r));
-    wtools::handle_error(&name, 2, run(x, y, w, mode));
-}
-
-fn parse(r: getopts::Result) -> wtools::Result<(i32, i32, u64, Mode)> {
-    let matches = try!(r.map_err(|e| match e {
-        getopts::Fail::UnrecognizedOption(_) => "unrecognized option",
-        getopts::Fail::OptionDuplicated(_) => "option duplicated",
-        _ => unreachable!()
-    }));
-
-    let mode = try!(if matches.opt_present("r") && matches.opt_present("a") {
-        Err("cannot have both -r and -a")
-    } else if matches.opt_present("a") {
-        Ok(Mode::Absolute)
-    } else {
-        Ok(Mode::Relative)
-    });
-
-    let args = matches.free;
-
-    if args.len() != 3 {
-        return Err("missing or extraneous arguments");
+    parse_args!{
+        description: "move a window on the XServer",
+        opt mode: Mode = Mode::Relative,
+            (&["-r", "--relative"], Mode::Relative, "move window relatively"),
+            (&["-a", "--absolute"], Mode::Absolute, "move window absolutely"),
+        arg x: i32 = 0,
+            ("x", "x coordinate"),
+        arg y: i32 = 0,
+            ("y", "y coordinate"),
+        arg win: wtools::WindowID = 0x0.into(),
+            ("win", "XServer window id")
     }
 
-    let x = try!(args[0].parse().ok().ok_or("x is not a number"));
-    let y = try!(args[1].parse().ok().ok_or("y is not a number"));
-    let w = try!(wtools::parse_hex(&args[2]).ok_or("w is not a hexadecimal number"));
-
-    Ok((x, y, w, mode))
+    cli::handle_error(&name, 2, run(mode, x, y, win));
 }
 
-fn run(x: i32, y: i32, w: u64, mode: Mode) -> wtools::Result<()> {
+fn run(mode: Mode, x: i32, y: i32, w: wtools::WindowID) -> Result<(), &'static str> {
     let disp = try!(wtools::Display::open());
-    let mut win = try!(disp.window(w));
+    let mut win = try!(
+        disp.window(w).map_err(|_| "window id does not exist")
+    );
     match mode {
         Mode::Relative => try!(win.position_relative(x, y)),
         Mode::Absolute => try!(win.position(x, y))

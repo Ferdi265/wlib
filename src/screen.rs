@@ -1,7 +1,6 @@
 use std::mem;
 use x11::xlib;
 
-use super::err::Result;
 use super::display::Display;
 use super::window::Window;
 
@@ -17,8 +16,8 @@ impl<'a> Screen<'a> {
             s: s
         }
     }
-    pub fn root(&self) -> Result<Window<'a>> {
-        Window::new(self.d, self.s.root)
+    pub fn root(&self) -> Result<Window<'a>, &'static str> {
+        Window::new(self.d, self.s.root.into())
     }
     pub fn width(&self) -> i32 {
         self.s.width

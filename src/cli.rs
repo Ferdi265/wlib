@@ -111,7 +111,9 @@ pub fn number_args() -> (String, Vec<String>) {
     (name, args)
 }
 
-/// TODO
+/// Takes a `Result<T, E>` and writes an error message if it is `Err(E)`
+///
+/// Writes an error message and exits if it is `Err(E)`, returns `T` otherwise.
 pub fn handle_error<T, E: fmt::Display>(name: &str, code: i32, r: Result<T, E>) -> T {
     match r {
         Ok(t) => t,

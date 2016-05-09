@@ -1,29 +1,35 @@
 use std::os::raw;
-use std::mem;
 use std::ptr;
 use std::ffi;
 use x11::xlib;
 
 use super::Screen;
 use super::Window;
-use super::WindowID;
+use super::window;
 
 unsafe extern "C" fn x_noop_error_handler(_: *mut xlib::Display, _: *mut xlib::XErrorEvent) -> i32 {
     0
 }
 
-pub struct Display<'a> {
-    pub(super) d: &'a xlib::Display
+pub struct Display {
+    pub(super) d: ptr::Unique<xlib::Display>
 }
 
-impl<'a> Display<'a> {
-    fn open_direct(dispname: *const raw::c_char) -> Result<Display<'a>, &'static str> {
+impl Display {
+    fn new(d: ptr::Unique<xlib::Display>) -> Self {
+        Display { d: d }
+    }
+    fn open_direct(dispname: *const raw::c_char) -> Result<Self, &'static str> {
         let d = unsafe {
             // NOTE: register noop error handler to avoid crashes
             xlib::XSetErrorHandler(Some(x_noop_error_handler));
-            xlib::XOpenDisplay(dispname).as_ref()
+            xlib::XOpenDisplay(dispname)
         };
-        d.map(|d| Display { d: d }).ok_or("XOpenDisplay() failed: pointer is NULL")
+        if d.is_null() {
+            Err("XOpenDisplay() failed: pointer is NULL")
+        } else {
+            Ok(Display::new(unsafe { ptr::Unique::new(d) }))
+        }
     }
     /// Opens a connection to the Xorg display server
     ///
@@ -32,7 +38,7 @@ impl<'a> Display<'a> {
     /// Returns an error message if either `dispname` is not a valid
     /// `std::ffi::CString` or the call to `XOpenDisplay()` returned a NULL
     /// pointer.
-    pub fn open_named(dispname: &str) -> Result<Display<'a>, &'static str> {
+    pub fn open_named(dispname: &'static str) -> Result<Self, &str> {
         let cs = try!(
             ffi::CString::new(dispname)
                 .map_err(|_| "CString::new() failed: found NULL byte")
@@ -45,12 +51,12 @@ impl<'a> Display<'a> {
     ///
     /// Returns an error message if the call to `XOpenDisplay()` returned a
     /// NULL pointer
-    pub fn open() -> Result<Display<'a>, &'static str> {
+    pub fn open() -> Result<Self, &'static str> {
         return Self::open_direct(ptr::null());
     }
     /// Get the number of screens the display has
-    pub fn screens(&'a self) -> i32 {
-        unsafe { xlib::XScreenCount(mem::transmute(self.d)) }
+    pub fn screens(&self) -> i32 {
+        unsafe { xlib::XScreenCount(*self.d) }
     }
     /// Get a screen from the display
     ///
@@ -61,7 +67,7 @@ impl<'a> Display<'a> {
     /// - `screennum` is less than 0
     /// - `screennum` is greater or equal to `display.screens()`
     /// - `XScreenOfDisplay()` returned a NULL pointer
-    pub fn screen_num(&'a self, screennum: i32) -> Result<Screen<'a>, &'static str> {
+    pub fn screen_num<'d>(&'d self, screennum: i32) -> Result<Screen<'d>, &'static str> {
         if screennum < 0 {
             return Err("screennum less than 0");
         }
@@ -69,34 +75,42 @@ impl<'a> Display<'a> {
             return Err("screennum greater or equal to screen count");
         }
         let s = unsafe {
-            xlib::XScreenOfDisplay(mem::transmute(self.d), screennum).as_ref()
+            xlib::XScreenOfDisplay(*self.d, screennum)
         };
-        s.map(|s| Screen::new(self.d, s)).ok_or("XScreenOfDisplay() failed: pointer is NULL")
+        if s.is_null() {
+            Err("XScreenOfDisplay() failed: pointer is NULL")
+        } else {
+            Ok(Screen::new(&self.d, unsafe { ptr::Unique::new(s) }))
+        }
     }
     /// Get the default screen associated with the display
     ///
     /// Returns an error message if the call to `XDefaultScreenOfDisplay`
     /// returned a NULL pointer.
-    pub fn screen(&'a self) -> Result<Screen<'a>, &'static str> {
+    pub fn screen<'d>(&'d self) -> Result<Screen<'d>, &'static str> {
         let s = unsafe {
-            xlib::XDefaultScreenOfDisplay(mem::transmute(self.d)).as_ref()
+            xlib::XDefaultScreenOfDisplay(*self.d)
         };
-        s.map(|s| Screen::new(self.d, s)).ok_or("XDefaultScreenOfDisplay() failed: pointer is NULL")
+        if s.is_null() {
+            Err("XDefaultScreenOfDisplay() failed: pointer is NULL")
+        } else {
+            Ok(Screen::new(&self.d, unsafe { ptr::Unique::new(s) }))
+        }
     }
     /// Gets the window with the specified window id
     ///
     /// Returns an error if the window does not exist.
-    pub fn window(&'a self, id: WindowID) -> Result<Window<'a>, &'static str> {
-        Window::new(self.d, id)
+    pub fn window<'d>(&'d self, id: window::ID) -> Result<Window<'d>, &'static str> {
+        Window::new(&self.d, id)
     }
 }
 
-impl<'a> Drop for Display<'a> {
+impl Drop for Display {
     /// Closes the connection when the `Display` is dropped
     fn drop(&mut self) {
         unsafe {
             // NOTE: XCloseDisplay() is hardcoded to return 0, so ignore it
-            xlib::XCloseDisplay(mem::transmute(self.d));
+            xlib::XCloseDisplay(*self.d);
         }
     }
 }

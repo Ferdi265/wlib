@@ -22,21 +22,21 @@ fn main() {
             ("x", "x coordinate"),
         arg y: i32 = 0,
             ("y", "y coordinate"),
-        arg wid: wtools::WindowID = 0.into(),
+        arg wid: wtools::window::ID = 0.into(),
             ("wid", "XServer window id (hexadecimal)")
     }
 
     cli::handle_error(&name, 1, run(mode, x, y, wid));
 }
 
-fn run(mode: Mode, x: i32, y: i32, wid: wtools::WindowID) -> Result<(), &'static str> {
+fn run(mode: Mode, x: i32, y: i32, wid: wtools::window::ID) -> Result<(), &'static str> {
     let disp = try!(wtools::Display::open());
     let mut win = try!(
         disp.window(wid).map_err(|_| "window id does not exist")
     );
     match mode {
         Mode::Relative => try!(win.resize_relative(x, y)),
-        Mode::Absolute => try!(win.resize(x, y))
+        Mode::Absolute => try!(win.resize_absolute(x, y))
     }
     Ok(())
 }

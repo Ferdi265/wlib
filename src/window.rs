@@ -1,18 +1,19 @@
 use std::convert;
 use std::str;
 use std::mem;
+use std::ptr;
 use x11::xlib;
 
-pub struct Window<'a> {
-    w: u64,
-    d: &'a xlib::Display,
+pub struct Window<'d> {
+    w: ID,
+    d: &'d ptr::Unique<xlib::Display>,
     attrs: xlib::XWindowAttributes
 }
 
-impl<'a> Window<'a> {
-    pub(super) fn new(d: &'a xlib::Display, id: WindowID) -> Result<Window<'a>, &'static str> {
+impl<'d> Window<'d> {
+    pub(super) fn new(d: &'d ptr::Unique<xlib::Display>, id: ID) -> Result<Self, &'static str> {
         let mut w = Window {
-            w: id.into(),
+            w: id,
             d: d,
             attrs: unsafe {
                 mem::zeroed()
@@ -22,7 +23,7 @@ impl<'a> Window<'a> {
     }
     fn update_attrs(&mut self) -> Result<(), &'static str> {
         let ok = unsafe {
-            xlib::XGetWindowAttributes(mem::transmute(self.d), self.w, &mut self.attrs) == 1
+            xlib::XGetWindowAttributes(**self.d, self.w.into(), &mut self.attrs) == 1
         };
         if ok {
             Ok(())
@@ -30,19 +31,15 @@ impl<'a> Window<'a> {
             Err("XGetWindowAttributes() failed")
         }
     }
-    /// Returns the window id
-    pub fn id(&self) -> WindowID {
-        self.w.into()
-    }
     /// Moves the window
     ///
     /// Moves the window to the coordinates `x` and `y`.
     ///
     /// Returns an error message if the call to `XMoveWindow()` or the call to
     /// `XWindowAttributes()` after moving failed.
-    pub fn position(&mut self, x: i32, y: i32) -> Result<(), &'static str> {
+    pub fn reposition_absolute(&mut self, x: i32, y: i32) -> Result<(), &'static str> {
         let ok = unsafe {
-            xlib::XMoveWindow(mem::transmute(self.d), self.w, x, y) == 1
+            xlib::XMoveWindow(**self.d, self.w.into(), x, y) == 1
         };
         if ok {
             self.update_attrs()
@@ -56,10 +53,10 @@ impl<'a> Window<'a> {
     ///
     /// Returns an error message if the call to `XMoveWindow()` or the call to
     /// `XWindowAttributes()` after moving failed.
-    pub fn position_relative(&mut self, x: i32, y: i32) -> Result<(), &'static str> {
-        let x = self.attrs.x + x;
-        let y = self.attrs.y + y;
-        self.position(x, y)
+    pub fn reposition_relative(&mut self, x: i32, y: i32) -> Result<(), &'static str> {
+        let x = self.x() + x;
+        let y = self.y() + y;
+        self.reposition_absolute(x, y)
     }
     /// Resizes the window
     ///
@@ -67,7 +64,7 @@ impl<'a> Window<'a> {
     ///
     /// Returns an error message if the call to `XResizeWindow()` or the call to
     /// `XWindowAttributes()` after resizing failed.
-    pub fn resize(&mut self, w: i32, h: i32) -> Result<(), &'static str> {
+    pub fn resize_absolute(&mut self, w: i32, h: i32) -> Result<(), &'static str> {
         if w < 0 {
             return Err("width less than 0");
         } else if w > u16::max_value() as i32 {
@@ -79,7 +76,7 @@ impl<'a> Window<'a> {
         }
 
         let ok = unsafe {
-            xlib::XResizeWindow(mem::transmute(self.d), self.w, w as u32, h as u32) == 1
+            xlib::XResizeWindow(**self.d, self.w.into(), w as u32, h as u32) == 1
         };
         if ok {
             self.update_attrs()
@@ -95,22 +92,135 @@ impl<'a> Window<'a> {
     /// Returns an error message if the call to `XResizeWindow()` or the call to
     /// `XWindowAttributes()` after resizing failed.
     pub fn resize_relative(&mut self, w: i32, h: i32) -> Result<(), &'static str> {
-        let w = self.attrs.width + w;
-        let h = self.attrs.height + h;
-        self.resize(w, h)
+        let w = self.width() + w;
+        let h = self.height() + h;
+        self.resize_absolute(w, h)
+    }
+    pub fn map(&mut self) -> Result<(), &'static str> {
+        let ok = unsafe {
+            xlib::XMapWindow(**self.d, self.w.into()) == 1
+        };
+        if ok {
+            self.update_attrs()
+        } else {
+            Err("XMapWindow() failed")
+        }
+    }
+    pub fn unmap(&mut self) -> Result<(), &'static str> {
+        let ok = unsafe {
+            xlib::XUnmapWindow(**self.d, self.w.into()) == 1
+        };
+        if ok {
+            self.update_attrs()
+        } else {
+            Err("XUnmapWindow() failed")
+        }
+    }
+    pub fn configure<'w>(&'w mut self) -> Changes<'d, 'w> {
+        Changes::new(self)
+    }
+    pub fn id(&self) -> ID {
+        self.w.into()
+    }
+    pub fn x(&self) -> i32 {
+        self.attrs.x
+    }
+    pub fn y(&self) -> i32 {
+        self.attrs.y
+    }
+    pub fn width(&self) -> i32 {
+        self.attrs.width
+    }
+    pub fn height(&self) -> i32 {
+        self.attrs.height
+    }
+    pub fn position(&self) -> (i32, i32) {
+        (self.x(), self.y())
+    }
+    pub fn size(&self) -> (i32, i32) {
+        (self.width(), self.height())
+    }
+    pub fn border(&self) -> i32 {
+        self.attrs.border_width
+    }
+    pub fn visible(&self) -> bool {
+        self.attrs.map_state == xlib::IsViewable
+    }
+    pub fn mapped(&self) -> bool {
+        self.attrs.map_state != xlib::IsUnmapped
+    }
+    pub fn ignored(&self) -> bool {
+        self.attrs.override_redirect == 1
     }
 }
 
-pub struct WindowID(pub u64);
+pub enum StackMode {
+    Above = 0,
+    Below = 1,
+    Opposite = 4
+}
 
-impl str::FromStr for WindowID {
+pub struct Changes<'d: 'w, 'w> {
+    w: &'w mut Window<'d>,
+    changes: xlib::XWindowChanges,
+    mask: u16
+}
+
+impl<'d, 'w> Changes<'d, 'w> {
+    fn new(w: &'w mut Window<'d>) -> Self {
+        Changes {
+            w: w,
+            changes: unsafe { mem::zeroed() },
+            mask: 0
+        }
+    }
+    pub fn x(&mut self, x: i32) {
+        self.changes.x = x;
+        self.mask |= xlib::CWX;
+    }
+    pub fn y(&mut self, y: i32) {
+        self.changes.y = y;
+        self.mask |= xlib::CWY;
+    }
+    pub fn width(&mut self, width: i32) {
+        self.changes.width = width;
+        self.mask |= xlib::CWWidth;
+    }
+    pub fn height(&mut self, height: i32) {
+        self.changes.height = height;
+        self.mask |= xlib::CWHeight;
+    }
+    pub fn border(&mut self, border: i32) {
+        self.changes.border_width = border;
+        self.mask |= xlib::CWBorderWidth;
+    }
+    pub fn stack(&mut self, stack: StackMode) {
+        self.changes.stack_mode = stack as i32;
+        self.mask |= xlib::CWStackMode;
+    }
+    pub fn apply(self) -> Result<(), &'static str> {
+        let ok = unsafe {
+            xlib::XConfigureWindow(**self.w.d, self.w.id().into(), self.mask as u32, mem::transmute(&self.changes)) == 1
+        };
+        if ok {
+            self.w.update_attrs()
+        } else {
+            Err("XConfigureWindow() failed")
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct ID(pub u64);
+
+impl str::FromStr for ID {
     type Err = &'static str;
-    /// Creates a `WindowID` from a hexadecimal `&str`
+    /// Creates a `ID` from a hexadecimal `&'static str`
     ///
-    /// Parses a `&str` prefixed with `0x` as a hexadecimal number.
+    /// Parses a `&'static str` prefixed with `0x` as a hexadecimal number.
     ///
-    /// Returns an error message if the `&str` was malformed.
-    fn from_str(s: &str) -> Result<WindowID, Self::Err> {
+    /// Returns an error message if the `&'static str` was malformed.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut hex = s.to_string();
         let is = if hex.len() < 3 {
             false
@@ -126,13 +236,13 @@ impl str::FromStr for WindowID {
     }
 }
 
-impl convert::From<u64> for WindowID {
-    fn from(u: u64) -> WindowID {
-        WindowID(u)
+impl convert::From<u64> for ID {
+    fn from(u: u64) -> ID {
+        ID(u)
     }
 }
 
-impl convert::Into<u64> for WindowID {
+impl convert::Into<u64> for ID {
     fn into(self) -> u64 {
         self.0
     }

@@ -116,8 +116,16 @@ impl<'d> Window<'d> {
             Err("XUnmapWindow() failed")
         }
     }
-    pub fn configure<'w>(&'w mut self) -> Changes<'d, 'w> {
-        Changes::new(self)
+    pub fn configure<'w>(&'w mut self, c: &Changes) -> Result<(), &'static str> {
+        let mut changes = c.changes;
+        let ok = unsafe {
+            xlib::XConfigureWindow(**self.d, self.id().into(), c.mask as u32, &mut changes) == 1
+        };
+        if ok {
+            self.update_attrs()
+        } else {
+            Err("XConfigureWindow() failed")
+        }
     }
     pub fn id(&self) -> ID {
         self.w.into()
@@ -140,7 +148,7 @@ impl<'d> Window<'d> {
     pub fn size(&self) -> (i32, i32) {
         (self.width(), self.height())
     }
-    pub fn border(&self) -> i32 {
+    pub fn border_width(&self) -> i32 {
         self.attrs.border_width
     }
     pub fn visible(&self) -> bool {
@@ -160,16 +168,14 @@ pub enum StackMode {
     Opposite = 4
 }
 
-pub struct Changes<'d: 'w, 'w> {
-    w: &'w mut Window<'d>,
+pub struct Changes {
     changes: xlib::XWindowChanges,
     mask: u16
 }
 
-impl<'d, 'w> Changes<'d, 'w> {
-    fn new(w: &'w mut Window<'d>) -> Self {
+impl Changes {
+    pub fn new() -> Self {
         Changes {
-            w: w,
             changes: unsafe { mem::zeroed() },
             mask: 0
         }
@@ -190,23 +196,53 @@ impl<'d, 'w> Changes<'d, 'w> {
         self.changes.height = height;
         self.mask |= xlib::CWHeight;
     }
-    pub fn border(&mut self, border: i32) {
-        self.changes.border_width = border;
+    pub fn border_width(&mut self, border_width: i32) {
+        self.changes.border_width = border_width;
         self.mask |= xlib::CWBorderWidth;
     }
     pub fn stack(&mut self, stack: StackMode) {
         self.changes.stack_mode = stack as i32;
         self.mask |= xlib::CWStackMode;
     }
-    pub fn apply(self) -> Result<(), &'static str> {
-        let ok = unsafe {
-            xlib::XConfigureWindow(**self.w.d, self.w.id().into(), self.mask as u32, mem::transmute(&self.changes)) == 1
-        };
-        if ok {
-            self.w.update_attrs()
+}
+
+#[derive(Copy, Clone)]
+struct Color(u8, u8, u8);
+
+impl Color {
+    fn from_i32(i: i32) -> Self {
+        Color(
+            (i & (255 << 8 * 2)) as u8,
+            (i & (255 << 8 * 1)) as u8,
+            (i & (255 << 8 * 0)) as u8
+        )
+    }
+}
+
+impl str::FromStr for Color {
+    type Err = &'static str;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut hex = s.to_string();
+        let is = if hex.len() != 8 {
+            false
         } else {
-            Err("XConfigureWindow() failed")
+            let pre: String = hex.drain(..2).collect();
+            pre == "0x".to_string()
+        };
+        if is {
+            i32::from_str_radix(&hex, 16).map_err(|_| "not a hexadecimal color").map(|i| Color::from_i32(i))
+        } else {
+            Err("not a hexadecimal color")
         }
+    }
+}
+
+impl convert::Into<i32> for Color {
+    fn into(self) -> i32 {
+        0 |
+            ((self.0 as i32) << 8 * 2) |
+            ((self.1 as i32) << 8 * 1) |
+            ((self.2 as i32) << 8 * 0)
     }
 }
 

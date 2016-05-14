@@ -35,66 +35,55 @@ impl<'d> Window<'d> {
     ///
     /// Moves the window to the coordinates `x` and `y`.
     ///
-    /// Returns an error message if the call to `XMoveWindow()` or the call to
+    /// Returns an error message if the call to `XConfigureWindow()` or the call to
     /// `XWindowAttributes()` after moving failed.
     pub fn reposition_absolute(&mut self, x: i32, y: i32) -> Result<(), &'static str> {
-        let ok = unsafe {
-            xlib::XMoveWindow(**self.d, self.w.into(), x, y) == 1
-        };
-        if ok {
-            self.update_attrs()
-        } else {
-            Err("XMoveWindow() failed")
-        }
+        let mut c = Changes::new();
+        c.x(x);
+        c.y(y);
+        self.configure(&c)
     }
     /// Moves the window relatively
     ///
     /// Moves the window by `x` pixels horizontally and `y` pixels vertically.
     ///
-    /// Returns an error message if the call to `XMoveWindow()` or the call to
+    /// Returns an error message if the call to `XConfigureWindow()` or the call to
     /// `XWindowAttributes()` after moving failed.
     pub fn reposition_relative(&mut self, x: i32, y: i32) -> Result<(), &'static str> {
-        let x = self.x() + x;
-        let y = self.y() + y;
-        self.reposition_absolute(x, y)
+        let mut c = Changes::new();
+        c.x(self.x() + x);
+        c.y(self.y() + y);
+        self.configure(&c)
     }
     /// Resizes the window
     ///
     /// Resizes the window to width `w` and height `h`.
     ///
-    /// Returns an error message if the call to `XResizeWindow()` or the call to
+    /// Returns an error message if the call to `XConfigureWindow()` or the call to
     /// `XWindowAttributes()` after resizing failed.
     pub fn resize_absolute(&mut self, w: i32, h: i32) -> Result<(), &'static str> {
-        if w < 0 {
-            return Err("width less than 0");
-        } else if w > u16::max_value() as i32 {
-            return Err("width greater than u16::max_alue()");
-        } else if h < 0 {
-            return Err("height less than 0");
-        } else if w > u16::max_value() as i32 {
-            return Err("height greater than u16::max_value()");
-        }
-
-        let ok = unsafe {
-            xlib::XResizeWindow(**self.d, self.w.into(), w as u32, h as u32) == 1
-        };
-        if ok {
-            self.update_attrs()
-        } else {
-            Err("XResizeWindow() failed")
-        }
+        let mut c = Changes::new();
+        c.width(w);
+        c.height(h);
+        self.configure(&c)
     }
     /// Resizes the window relatively
     ///
     /// Resizes the window by `w` pixels horizontally and `h` pixels
     /// vertically.
     ///
-    /// Returns an error message if the call to `XResizeWindow()` or the call to
+    /// Returns an error message if the call to `XConfigureWindow()` or the call to
     /// `XWindowAttributes()` after resizing failed.
     pub fn resize_relative(&mut self, w: i32, h: i32) -> Result<(), &'static str> {
-        let w = self.width() + w;
-        let h = self.height() + h;
-        self.resize_absolute(w, h)
+        let mut c = Changes::new();
+        c.width(self.width() + w);
+        c.height(self.height() + h);
+        self.configure(&c)
+    }
+    pub fn border_resize(&mut self, b: i32) -> Result<(), &'static str> {
+        let mut c = Changes::new();
+        c.border_width(b);
+        self.configure(&c)
     }
     pub fn map(&mut self) -> Result<(), &'static str> {
         let ok = unsafe {
@@ -179,6 +168,10 @@ impl Changes {
             changes: unsafe { mem::zeroed() },
             mask: 0
         }
+    }
+    pub fn reset(&mut self) {
+        self.changes = unsafe { mem::zeroed() };
+        self.mask = 0;
     }
     pub fn x(&mut self, x: i32) {
         self.changes.x = x;

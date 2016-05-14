@@ -80,6 +80,12 @@ impl<'d> Window<'d> {
         c.height(self.height() + h);
         self.change(&c)
     }
+    /// Resizes the window border
+    ///
+    /// Resizes the window border to `b` pixels
+    ///
+    /// Returns an error message if the call to `XConfigureWindow()` or the call to
+    /// `XWindowAttributes()` after resizing failed.
     pub fn border_resize(&mut self, b: i32) -> Result<(), &'static str> {
         let mut c = Changes::new();
         c.border_width(b);

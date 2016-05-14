@@ -49,16 +49,16 @@ macro_rules! println_stderr {
 #[macro_export]
 macro_rules! parse_args {
     {
-        description : $desc:expr ,
-        $(
+        description : $desc:expr
+        $( ,
             opt $opt:ident : $otype:ty = $odefault:expr , $(
                 ( $onames:expr, $ovalue:expr , $ohelp:expr )
             ),*
-        ),* ,
-        $(
+        )*
+        $( ,
             arg $arg:ident : $atype:ty = $adefault:expr ,
             ( $aname: expr , $ahelp:expr )
-        ),*
+        )*
     } => {
         $(
             let mut $opt: $otype = $odefault;

@@ -240,17 +240,15 @@ impl Changes {
 pub struct Color {
     pub r: u8,
     pub g: u8,
-    pub b: u8,
-    pub a: u8
+    pub b: u8
 }
 
 impl Color {
     pub fn from_i32(i: i32) -> Self {
         Color {
-            r: (i & (255 << 8 * 3)) as u8,
-            g: (i & (255 << 8 * 2)) as u8,
-            b: (i & (255 << 8 * 1)) as u8,
-            a: (i & (255 << 8 * 0)) as u8
+            r: (i & (255 << 8 * 2)) as u8,
+            g: (i & (255 << 8 * 1)) as u8,
+            b: (i & (255 << 8 * 0)) as u8
         }
     }
 }
@@ -276,10 +274,9 @@ impl str::FromStr for Color {
 impl convert::Into<i32> for Color {
     fn into(self) -> i32 {
         0 |
-            ((self.r as i32) << 8 * 3) |
-            ((self.g as i32) << 8 * 2) |
-            ((self.b as i32) << 8 * 1) |
-            ((self.a as i32) << 8 * 0)
+            ((self.r as i32) << 8 * 2) |
+            ((self.g as i32) << 8 * 1) |
+            ((self.b as i32) << 8 * 0)
     }
 }
 

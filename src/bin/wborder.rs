@@ -11,11 +11,11 @@ fn main() {
     parse_args!{
         description: "change window border",
         opt color: wtools::Color,
-            (&["-c", "--color"], "window border color (hexadecimal)"),
+            (&["-c", "--color"], "border color"),
         opt size: i32,
-            (&["-s", "--size"], "window border size"),
+            (&["-s", "--size"], "border size"),
         arg wid: window::ID,
-            ("wid", "XServer window id (hexadecimal)")
+            ("wid", "window id")
     }
 
     cli::handle_error(&name, 1, run(color, size, wid));
@@ -24,7 +24,7 @@ fn main() {
 fn run(color: Option<wtools::Color>, size: Option<i32>, wid: window::ID) -> Result<(), &'static str> {
     let disp = try!(wtools::Display::open());
     let mut win = try!(
-        disp.window(wid).map_err(|_| "window id does not exist")
+        disp.window(wid).map_err(|_| "window does not exist")
     );
     let mut c = window::Changes::new();
     if let Some(color) = color {

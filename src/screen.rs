@@ -1,5 +1,6 @@
 use std::mem;
 use std::ptr;
+
 use x11::xlib;
 
 use super::Window;
@@ -16,7 +17,7 @@ impl<'d> Screen<'d> {
             s: s
         }
     }
-    pub fn get(&self) -> &xlib::Screen {
+    fn get(&self) -> &xlib::Screen {
         unsafe { self.s.get() }
     }
     /// Gets the root window of the screen

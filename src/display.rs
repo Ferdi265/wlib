@@ -1,6 +1,7 @@
 use std::os::raw;
 use std::ptr;
 use std::ffi;
+
 use x11::xlib;
 
 use super::Screen;

@@ -37,8 +37,8 @@ impl<'d> Window<'d> {
     ///
     /// Moves the window to the coordinates `x` and `y`.
     ///
-    /// Returns an error message if the call to `XConfigureWindow()` or the call to
-    /// `XWindowAttributes()` after moving failed.
+    /// Returns an error message if the call to `XConfigureWindow()` or the
+    /// call to `XGetWindowAttributes()` after moving failed.
     pub fn reposition_absolute(&mut self, x: i32, y: i32) -> Result<(), &'static str> {
         let mut c = Changes::new();
         c.x(x);
@@ -49,8 +49,8 @@ impl<'d> Window<'d> {
     ///
     /// Moves the window by `x` pixels horizontally and `y` pixels vertically.
     ///
-    /// Returns an error message if the call to `XConfigureWindow()` or the call to
-    /// `XWindowAttributes()` after moving failed.
+    /// Returns an error message if the call to `XConfigureWindow()` or the
+    /// call to `XGetWindowAttributes()` after moving failed.
     pub fn reposition_relative(&mut self, x: i32, y: i32) -> Result<(), &'static str> {
         let mut c = Changes::new();
         c.x(self.x() + x);
@@ -61,8 +61,8 @@ impl<'d> Window<'d> {
     ///
     /// Resizes the window to width `w` and height `h`.
     ///
-    /// Returns an error message if the call to `XConfigureWindow()` or the call to
-    /// `XWindowAttributes()` after resizing failed.
+    /// Returns an error message if the call to `XConfigureWindow()` or the
+    /// call to `XGetWindowAttributes()` after resizing failed.
     pub fn resize_absolute(&mut self, w: i32, h: i32) -> Result<(), &'static str> {
         let mut c = Changes::new();
         c.width(w);
@@ -74,8 +74,8 @@ impl<'d> Window<'d> {
     /// Resizes the window by `w` pixels horizontally and `h` pixels
     /// vertically.
     ///
-    /// Returns an error message if the call to `XConfigureWindow()` or the call to
-    /// `XWindowAttributes()` after resizing failed.
+    /// Returns an error message if the call to `XConfigureWindow()` or the
+    /// call to `XGetWindowAttributes()` after resizing failed.
     pub fn resize_relative(&mut self, w: i32, h: i32) -> Result<(), &'static str> {
         let mut c = Changes::new();
         c.width(self.width() + w);
@@ -86,23 +86,38 @@ impl<'d> Window<'d> {
     ///
     /// Resizes the window border to `b` pixels
     ///
-    /// Returns an error message if the call to `XConfigureWindow()` or the call to
-    /// `XWindowAttributes()` after resizing failed.
+    /// Returns an error message if the call to `XConfigureWindow()` or the
+    /// call to `XGetWindowAttributes()` after resizing failed.
     pub fn border_resize(&mut self, b: i32) -> Result<(), &'static str> {
         let mut c = Changes::new();
         c.border_width(b);
         self.change(&c)
     }
+    /// Changes the window border color
+    ///
+    /// Changes the window border to the color `color`
+    ///
+    /// Returns an error message if the call to `XChangeWindowAttributes()` or
+    /// the call to `XGetWindowAttributes()` after recoloring failed.
     pub fn border_recolor(&mut self, color: Color) -> Result<(), &'static str> {
         let mut c = Changes::new();
         c.border_color(color);
         self.change(&c)
     }
+    /// Changes ignore state for this window
+    ///
+    /// Sets or unsets override_redirect for this window
+    ///
+    /// Returns an error message if the call to `XChangeWindowAttributes()` or
+    /// the call to XGetWindowAttributes()` afterwards failed.
     pub fn ignore(&mut self, ignore: bool) -> Result<(), &'static str> {
         let mut c = Changes::new();
         c.ignore(ignore);
         self.change(&c)
     }
+    /// Maps the window
+    ///
+    /// Returns an error message if the call to `XMapWindow()` failed.
     pub fn map(&mut self) -> Result<(), &'static str> {
         let ok = unsafe {
             xlib::XMapWindow(**self.d, self.w.into()) == 1
@@ -113,6 +128,9 @@ impl<'d> Window<'d> {
             Err("XMapWindow() failed")
         }
     }
+    /// Unmaps the window
+    ///
+    /// Returns an error message if the call to `XUnmapWindow()` failed.
     pub fn unmap(&mut self) -> Result<(), &'static str> {
         let ok = unsafe {
             xlib::XUnmapWindow(**self.d, self.w.into()) == 1
@@ -123,6 +141,17 @@ impl<'d> Window<'d> {
             Err("XUnmapWindow() failed")
         }
     }
+    /// Changes window properties in batch
+    ///
+    /// Takes a `Changes` and calls `xlib` functions to apply these changes.
+    ///
+    /// Returns an error message if the call to either of these fails:
+    ///
+    /// - `XChangeWindowAttributes()` if `border_color` or `ignore` state are
+    ///   changed
+    /// - `XConfigureWindow()` if `x`, `y`, `width`, `height` or `border_width`
+    ///   are changed
+    /// - `XGetWindowAttributes()`
     pub fn change<'w>(&'w mut self, c: &Changes) -> Result<(), &'static str> {
         Ok(()).and_then(|_| {
             let mut attrs = c.attrs;
@@ -249,11 +278,6 @@ pub struct ID(pub u64);
 
 impl str::FromStr for ID {
     type Err = &'static str;
-    /// Creates a `ID` from a hexadecimal `&'static str`
-    ///
-    /// Parses a `&'static str` prefixed with `0x` as a hexadecimal number.
-    ///
-    /// Returns an error message if the `&'static str` was malformed.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut hex = s.to_string();
         let is = if hex.len() < 3 {

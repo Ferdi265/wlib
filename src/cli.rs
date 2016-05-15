@@ -20,10 +20,6 @@ macro_rules! println_stderr {
 /// # #[macro_use]
 /// # extern crate wtools;
 /// # fn main() {
-/// # // exit here because cargo test does not supply actual arguments to this
-/// # // test, making it fail. This test checks only if the macro compiles
-/// # // correctly and acts as an example for the docs.
-/// # std::process::exit(0);
 /// #[derive(Copy, Clone, Debug)]
 /// enum Mode {
 ///     Relative,
@@ -32,6 +28,14 @@ macro_rules! println_stderr {
 ///
 /// parse_args!{
 ///     description: "a cli utility",
+/// #   arguments: ("test".to_string(), vec![
+/// #       "--relative".to_string(),
+/// #       "-c".to_string(),
+/// #       "0xdec0de".to_string(),
+/// #       "213".to_string(),
+/// #       "-15".to_string(),
+/// #       "0xdeadbeef".to_string()
+/// #   ]),
 ///     flag mode: Mode = Mode::Relative,
 ///         (&["-r", "--relative"], Mode::Relative, "do sth relatively"),
 ///         (&["-r", "--absolute"], Mode::Absolute, "do sth absolutely"),
@@ -42,7 +46,7 @@ macro_rules! println_stderr {
 ///     arg y: i32,
 ///         ("y", "y coordinate"),
 ///     arg wid: wtools::window::ID,
-///         ("wid", "XServer window id (hexadecimal)")
+///         ("wid", "window id")
 /// }
 ///
 /// println!("mode: {:?}, color: {:?}, x: {}, y: {}, wid: {}", mode, color, x, y, wid);
@@ -52,81 +56,70 @@ macro_rules! println_stderr {
 macro_rules! parse_args {
     {
         description : $desc:expr
-        $( ,
-            flag $flg:ident : $ftype:ty = $fdefault:expr , $(
-                ( $fnames:expr, $fvalue:expr , $fhelp:expr )
-            ),*
+        $( , arguments : $arguments:expr )*
+        $( , flag $flag:ident : $ftype:ty = $fdefault:expr ,
+           $(( $fnames:expr , $fvalue:expr , $fhelp:expr )),*
         )*
-        $( ,
-            opt $opt:ident : $otype:ty , $(
-                ( $onames:expr, $ohelp:expr )
-            ),*
+        $( , list $list:ident : $ltype:ty ,
+           $(( $lnames:expr , $lvalue:expr , $lhelp:expr )),*
         )*
-        $( ,
-            arg $arg:ident : $atype:ty ,
+        $( , opt $opt:ident : $otype:ty ,
+           $(( $onames:expr , $ohelp:expr )),*
+        )*
+        $( , arg $arg:ident : $atype:ty ,
             ( $aname: expr , $ahelp:expr )
         )*
-
-        $( ,
-            optarg $oarg:ident : $oatype:ty ,
+        $( , optarg $oarg:ident : $oatype:ty ,
             ( $oaname: expr , $oahelp:expr )
         )*
     } => {
-        $(
-            let mut $flg: $ftype = $fdefault;
-        )*
-        $(
-            let mut $opt: Option<$otype> = None;
-        )*
-        $(
-            let mut $arg: Option<$atype> = None;
-        )*
-        $(
-            let mut $oarg: Option<$oatype> = None;
-        )*
+        $( let mut $flag: $ftype = $fdefault; )*
+        $( let mut $list: Vec<$ltype> = vec![]; )*
+        $( let mut $opt: Option<$otype> = None; )*
+        $( let mut $arg: Option<$atype> = None; )*
+        $( let mut $oarg: Option<$oatype> = None; )*
         {
             extern crate argparse;
             let mut ap = argparse::ArgumentParser::new();
             ap.set_description($desc);
             ap.stop_on_first_argument(true);
-            $(
-                ap.refer(&mut $flg) $(
-                    .add_option($fnames, argparse::StoreConst($fvalue), $fhelp)
-                )*;
+            $( ap.refer(&mut $flag)
+               $(.add_option($fnames, argparse::StoreConst($fvalue), $fhelp))*;
             )*
-            $(
-                ap.refer(&mut $opt) $(
-                    .add_option($onames, argparse::StoreOption, $ohelp)
-                )*;
+            $( ap.refer(&mut $list)
+               $(.add_option($lnames, argparse::PushConst($lvalue), $lhelp))*;
             )*
-            $(
-                ap.refer(&mut $arg)
-                    .add_argument($aname, argparse::StoreOption, $ahelp)
-                    .required();
+            $( ap.refer(&mut $opt)
+               $(.add_option($onames, argparse::StoreOption, $ohelp))*;
             )*
-            $(
-                ap.refer(&mut $oarg)
-                    .add_argument($oaname, argparse::StoreOption, $oahelp);
+            $( ap.refer(&mut $arg)
+                .add_argument($aname, argparse::StoreOption, $ahelp)
+                .required();
             )*
-            let (name, mut args) = $crate::cli::number_args();
+            $( ap.refer(&mut $oarg)
+                .add_argument($oaname, argparse::StoreOption, $oahelp);
+            )*
+            let mut arguments: Option<(String, Vec<String>)> = None;
+            $(
+                if arguments == None {
+                    arguments = Some($arguments);
+                }
+            )*
+            if arguments == None {
+                arguments = Some($crate::cli::number_args());
+            }
+            let (name, mut args) = arguments.unwrap();
             args.insert(0, name);
             match ap.parse(args, &mut ::std::io::stdout(), &mut ::std::io::stderr()) {
                 Err(e) => ::std::process::exit(e),
                 _ => ()
             }
         }
-        $(
-            let $flg = $flg;
-        )*
-        $(
-            let $opt = $opt;
-        )*
-        $(
-            let $arg = $arg.unwrap();
-        )*
-        $(
-            let $oarg = $oarg;
-        )*
+        $( let $flag = $flag; )*
+        $( let $list = $list; )*
+        $( let $opt = $opt; )*
+        $( let $arg = $arg.unwrap(); )*
+        $( let $oarg = $oarg; )*
     }
 }
 

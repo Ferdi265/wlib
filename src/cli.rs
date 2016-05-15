@@ -20,6 +20,9 @@ macro_rules! println_stderr {
 /// # #[macro_use]
 /// # extern crate wtools;
 /// # fn main() {
+/// # // exit here because cargo test does not supply actual arguments to this
+/// # // test, making it fail. This test checks only if the macro compiles
+/// # // correctly and acts as an example for the docs.
 /// # std::process::exit(0);
 /// #[derive(Copy, Clone, Debug)]
 /// enum Mode {

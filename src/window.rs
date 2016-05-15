@@ -3,7 +3,9 @@ use std::fmt;
 use std::str;
 use std::mem;
 use std::ptr;
+
 use x11::xlib;
+
 use super::Color;
 
 pub struct Window<'d> {

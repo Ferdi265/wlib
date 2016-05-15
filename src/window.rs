@@ -1,4 +1,5 @@
 use std::convert;
+use std::slice;
 use std::fmt;
 use std::str;
 use std::mem;
@@ -177,6 +178,38 @@ impl<'d> Window<'d> {
             }
         }).and_then(|_| self.update_attrs())
     }
+    pub fn children(&self) -> Result<Vec<Window<'d>>, &'static str> {
+        Ok(()).and_then(|_| {
+            let mut _i = (0, 0);
+            let mut n = 0;
+            let mut ws = ptr::null_mut();
+            let ok = unsafe {
+                xlib::XQueryTree(**self.d, self.id().into(), &mut _i.0, &mut _i.1, &mut ws, &mut n) > 0
+            };
+            if ok {
+                Ok((ws, n))
+            } else {
+                Err("XQueryTree() failed")
+            }
+        }).and_then(|res| {
+            let (ws, n) = res;
+            let mut children = vec![];
+            if n == 0 {
+                Ok(children)
+            } else if ws.is_null() {
+                Err("XQueryTree() returned less windows than it promised")
+            } else {
+                let windows = unsafe {
+                    slice::from_raw_parts(ws, n as usize)
+                };
+                for w in windows {
+                    let w = try!(Window::new(self.d, (*w).into()));
+                    children.push(w);
+                }
+                Ok(children)
+            }
+        })
+    }
     pub fn id(&self) -> ID {
         self.w.into()
     }
@@ -310,6 +343,6 @@ impl convert::Into<u64> for ID {
 
 impl fmt::Display for ID {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "{:x}", self.0)
+        write!(f, "{:#010x}", self.0)
     }
 }

@@ -57,6 +57,6 @@ impl convert::Into<i32> for Color {
 
 impl fmt::Display for Color {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "{:x}", self.pack())
+        write!(f, "{:#08x}", self.pack())
     }
 }

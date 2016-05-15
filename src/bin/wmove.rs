@@ -16,7 +16,7 @@ fn main() {
 
     parse_args!{
         description: "move window",
-        flg mode: Mode = Mode::Relative,
+        flag mode: Mode = Mode::Relative,
             (&["-r", "--relative"], Mode::Relative, "move relatively"),
             (&["-a", "--absolute"], Mode::Absolute, "move absolutely"),
         arg x: i32,

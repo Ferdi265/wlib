@@ -32,7 +32,7 @@ macro_rules! println_stderr {
 ///
 /// parse_args!{
 ///     description: "a cli utility",
-///     flg mode: Mode = Mode::Relative,
+///     flag mode: Mode = Mode::Relative,
 ///         (&["-r", "--relative"], Mode::Relative, "do sth relatively"),
 ///         (&["-r", "--absolute"], Mode::Absolute, "do sth absolutely"),
 ///     opt color: wtools::Color,
@@ -53,7 +53,7 @@ macro_rules! parse_args {
     {
         description : $desc:expr
         $( ,
-            flg $flg:ident : $ftype:ty = $fdefault:expr , $(
+            flag $flg:ident : $ftype:ty = $fdefault:expr , $(
                 ( $fnames:expr, $fvalue:expr , $fhelp:expr )
             ),*
         )*
@@ -66,6 +66,11 @@ macro_rules! parse_args {
             arg $arg:ident : $atype:ty ,
             ( $aname: expr , $ahelp:expr )
         )*
+
+        $( ,
+            optarg $oarg:ident : $oatype:ty ,
+            ( $oaname: expr , $oahelp:expr )
+        )*
     } => {
         $(
             let mut $flg: $ftype = $fdefault;
@@ -75,6 +80,9 @@ macro_rules! parse_args {
         )*
         $(
             let mut $arg: Option<$atype> = None;
+        )*
+        $(
+            let mut $oarg: Option<$oatype> = None;
         )*
         {
             extern crate argparse;
@@ -96,6 +104,10 @@ macro_rules! parse_args {
                     .add_argument($aname, argparse::StoreOption, $ahelp)
                     .required();
             )*
+            $(
+                ap.refer(&mut $oarg)
+                    .add_argument($oaname, argparse::StoreOption, $oahelp);
+            )*
             let (name, mut args) = $crate::cli::number_args();
             args.insert(0, name);
             match ap.parse(args, &mut ::std::io::stdout(), &mut ::std::io::stderr()) {
@@ -111,6 +123,9 @@ macro_rules! parse_args {
         )*
         $(
             let $arg = $arg.unwrap();
+        )*
+        $(
+            let $oarg = $oarg;
         )*
     }
 }

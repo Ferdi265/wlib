@@ -54,3 +54,15 @@ Resize a window relatively or absolutely.
 `wborder [-c color] [-s size] wid`
 
 Change a window's border color and width.
+
+### wroot
+
+`wroot`
+
+Returns the root window id.
+
+### wlist
+
+`wlist [-u -o -a] [wid]`
+
+Lists the children of wid, or the root window.

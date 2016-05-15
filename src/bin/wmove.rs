@@ -16,14 +16,14 @@ fn main() {
 
     parse_args!{
         description: "move a window on the XServer",
-        opt mode: Mode = Mode::Relative,
+        flg mode: Mode = Mode::Relative,
             (&["-r", "--relative"], Mode::Relative, "move window relatively"),
             (&["-a", "--absolute"], Mode::Absolute, "move window absolutely"),
-        arg x: i32 = 0,
+        arg x: i32,
             ("x", "x coordinate"),
-        arg y: i32 = 0,
+        arg y: i32,
             ("y", "y coordinate"),
-        arg wid: window::ID = 0.into(),
+        arg wid: window::ID,
             ("wid", "XServer window id (hexadecimal)")
     }
 

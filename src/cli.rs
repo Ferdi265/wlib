@@ -19,7 +19,6 @@ macro_rules! println_stderr {
 /// ```
 /// # #[macro_use]
 /// # extern crate wtools;
-/// # use wtools::WindowID;
 /// # fn main() {
 /// # std::process::exit(0);
 /// #[derive(Copy, Clone, Debug)]
@@ -30,20 +29,20 @@ macro_rules! println_stderr {
 ///
 /// parse_args!{
 ///     description: "a cli utility",
-///     opt mode: Mode = Mode::Relative,
+///     flg mode: Mode = Mode::Relative,
 ///         (&["-r", "--relative"], Mode::Relative, "do sth relatively"),
 ///         (&["-r", "--absolute"], Mode::Absolute, "do sth absolutely"),
-///     arg x: i32 = 0,
+///     opt color: wtools::Color,
+///         (&["-c", "--color"], "color (hexadecimal)"),
+///     arg x: i32,
 ///         ("x", "x coordinate"),
-///     arg y: i32 = 0,
+///     arg y: i32,
 ///         ("y", "y coordinate"),
-///     arg wid: WindowID = 0.into(),
+///     arg wid: wtools::window::ID,
 ///         ("wid", "XServer window id (hexadecimal)")
 /// }
 ///
-/// let id: u64 = wid.into();
-///
-/// println!("mode: {:?}, x: {}, y: {}, wid: {}", mode, x, y, id);
+/// println!("mode: {:?}, color: {:?}, x: {}, y: {}, wid: {}", mode, color, x, y, wid);
 /// # }
 /// ```
 #[macro_export]
@@ -51,20 +50,28 @@ macro_rules! parse_args {
     {
         description : $desc:expr
         $( ,
-            opt $opt:ident : $otype:ty = $odefault:expr , $(
-                ( $onames:expr, $ovalue:expr , $ohelp:expr )
+            flg $flg:ident : $ftype:ty = $fdefault:expr , $(
+                ( $fnames:expr, $fvalue:expr , $fhelp:expr )
             ),*
         )*
         $( ,
-            arg $arg:ident : $atype:ty = $adefault:expr ,
+            opt $opt:ident : $otype:ty , $(
+                ( $onames:expr, $ohelp:expr )
+            ),*
+        )*
+        $( ,
+            arg $arg:ident : $atype:ty ,
             ( $aname: expr , $ahelp:expr )
         )*
     } => {
         $(
-            let mut $opt: $otype = $odefault;
+            let mut $flg: $ftype = $fdefault;
         )*
         $(
-            let mut $arg: $atype = $adefault;
+            let mut $opt: Option<$otype> = None;
+        )*
+        $(
+            let mut $arg: Option<$atype> = None;
         )*
         {
             extern crate argparse;
@@ -72,13 +79,18 @@ macro_rules! parse_args {
             ap.set_description($desc);
             ap.stop_on_first_argument(true);
             $(
+                ap.refer(&mut $flg) $(
+                    .add_option($fnames, argparse::StoreConst($fvalue), $fhelp)
+                )*;
+            )*
+            $(
                 ap.refer(&mut $opt) $(
-                    .add_option($onames, argparse::StoreConst($ovalue), $ohelp)
+                    .add_option($onames, argparse::StoreOption, $ohelp)
                 )*;
             )*
             $(
                 ap.refer(&mut $arg)
-                    .add_argument($aname, argparse::Store, $ahelp)
+                    .add_argument($aname, argparse::StoreOption, $ahelp)
                     .required();
             )*
             let (name, mut args) = $crate::cli::number_args();
@@ -89,10 +101,13 @@ macro_rules! parse_args {
             }
         }
         $(
+            let $flg = $flg;
+        )*
+        $(
             let $opt = $opt;
         )*
         $(
-            let $arg = $arg;
+            let $arg = $arg.unwrap();
         )*
     }
 }

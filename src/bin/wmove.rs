@@ -3,6 +3,7 @@ extern crate wtools;
 
 use std::env;
 use wtools::cli;
+use wtools::window;
 
 #[derive(Copy, Clone)]
 enum Mode {
@@ -22,14 +23,14 @@ fn main() {
             ("x", "x coordinate"),
         arg y: i32 = 0,
             ("y", "y coordinate"),
-        arg wid: wtools::window::ID = 0.into(),
+        arg wid: window::ID = 0.into(),
             ("wid", "XServer window id (hexadecimal)")
     }
 
     cli::handle_error(&name, 1, run(mode, x, y, wid));
 }
 
-fn run(mode: Mode, x: i32, y: i32, wid: wtools::window::ID) -> Result<(), &'static str> {
+fn run(mode: Mode, x: i32, y: i32, wid: window::ID) -> Result<(), &'static str> {
     let disp = try!(wtools::Display::open());
     let mut win = try!(
         disp.window(wid).map_err(|_| "window id does not exist")

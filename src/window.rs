@@ -252,9 +252,9 @@ pub struct Color {
 impl Color {
     pub fn from_i32(i: i32) -> Self {
         Color {
-            r: (i & (255 << 8 * 2)) as u8,
-            g: (i & (255 << 8 * 1)) as u8,
-            b: (i & (255 << 8 * 0)) as u8
+            r: ((i & (255 << 8 * 2)) >> 8 * 2) as u8,
+            g: ((i & (255 << 8 * 1)) >> 8 * 1) as u8,
+            b: ((i & (255 << 8 * 0)) >> 8 * 0) as u8
         }
     }
 }

@@ -34,14 +34,23 @@ provided in the LICENSE file.
 
 ## Current tools
 
+All tools have a `--help` switch that gives more info about their usage. Long
+options are available, but omitted here for brevity.
+
 ### wmove
 
 `wmove [-r -a] x y wid`
 
-Moves a window on the XServer relatively or absolutely.
+Move a window relatively or absolutely.
 
 ### wresize
 
 `wresize [-r -a] x y wid`
 
-Resizes a window on the XServer relatively or absolutely.
+Resize a window relatively or absolutely.
+
+### wborder
+
+`wborder [-c color] [-s size] wid`
+
+Change a window's border color and width.

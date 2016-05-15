@@ -29,7 +29,7 @@ is ever used by people other than me.
 
 ## License
 
-This project is under the GNU GPLv3 and later licenses. The GNU GPLv3 is
+This project is licensed under the GNU GPLv3 and later licenses. The GNU GPLv3 is
 provided in the LICENSE file.
 
 ## Current tools

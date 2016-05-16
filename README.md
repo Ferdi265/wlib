@@ -43,6 +43,12 @@ options are available, but omitted here for brevity.
 
 Change a window's border color and width.
 
+### wdestroy
+
+`wdestroy [-k] wid`
+
+Destroys a window or kills the controlling client.
+
 ### wfocus
 
 `wfocus wid`
@@ -66,6 +72,12 @@ Gives information about a window.
 `wlist [-uoa] [wid]`
 
 Lists the children of wid, defaults to the root window.
+
+### wmap
+
+`wmap [-mu] wid`
+
+Maps or unmaps the window.
 
 ### wmove
 

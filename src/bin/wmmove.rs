@@ -15,7 +15,7 @@ fn main() {
     let name = cli::name(&mut env::args());
 
     parse_args!{
-        description: "warp mouse pointer",
+        description: "move mouse pointer",
         flag mode: Mode = Mode::Relative,
             (&["-r", "--relative"], Mode::Relative, "move relatively (default)"),
             (&["-a", "--absolute"], Mode::Absolute, "move absolutely"),

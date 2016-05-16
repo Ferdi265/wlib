@@ -37,32 +37,42 @@ provided in the LICENSE file.
 All tools have a `--help` switch that gives more info about their usage. Long
 options are available, but omitted here for brevity.
 
-### wmove
-
-`wmove [-r -a] x y wid`
-
-Move a window relatively or absolutely.
-
-### wresize
-
-`wresize [-r -a] x y wid`
-
-Resize a window relatively or absolutely.
-
 ### wborder
 
 `wborder [-c color] [-s size] wid`
 
 Change a window's border color and width.
 
-### wroot
+### winfo
 
-`wroot`
+`winfo [-xywhbimo] wid`
 
-Returns the root window id.
+Gives information about a window.
 
 ### wlist
 
-`wlist [-u -o -a] [wid]`
+`wlist [-uoa] [wid]`
 
-Lists the children of wid, or the root window.
+Lists the children of wid, defaults to the root window.
+
+### wmove
+
+`wmove [-ra] x y wid`
+
+Move a window relatively or absolutely.
+
+### wresize
+
+`wresize [-ra] x y wid`
+
+Resize a window relatively or absolutely.
+
+### wwindow
+
+`wwindow [-rf]`
+
+Returns the window id of special windows.
+
+Currently supports the root window and the focused window. Prints an error if
+no window is focused in focus mode rather than printing the reserved resource
+ids for None and PointerRoot.

@@ -1,6 +1,6 @@
 [package]
 name = "wtools"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["theFerdi265 <theferdi265@gmail.com>"]
 
 [dependencies.x11]

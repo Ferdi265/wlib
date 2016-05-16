@@ -27,7 +27,7 @@ impl Display {
             xlib::XOpenDisplay(dispname)
         };
         if d.is_null() {
-            Err("XOpenDisplay() failed: pointer is NULL")
+            Err("XOpenDisplay() failed")
         } else {
             Ok(Display::new(unsafe { ptr::Unique::new(d) }))
         }
@@ -42,7 +42,7 @@ impl Display {
     pub fn open_named(dispname: &'static str) -> Result<Self, &str> {
         let cs = try!(
             ffi::CString::new(dispname)
-                .map_err(|_| "CString::new() failed: found NULL byte")
+                .map_err(|_| "CString::new() failed")
         );
         return Self::open_direct(cs.as_ptr());
     }
@@ -79,7 +79,7 @@ impl Display {
             xlib::XScreenOfDisplay(*self.d, screennum)
         };
         if s.is_null() {
-            Err("XScreenOfDisplay() failed: pointer is NULL")
+            Err("XScreenOfDisplay() failed")
         } else {
             Ok(Screen::new(&self.d, unsafe { ptr::Unique::new(s) }))
         }
@@ -93,7 +93,7 @@ impl Display {
             xlib::XDefaultScreenOfDisplay(*self.d)
         };
         if s.is_null() {
-            Err("XDefaultScreenOfDisplay() failed: pointer is NULL")
+            Err("XDefaultScreenOfDisplay() failed")
         } else {
             Ok(Screen::new(&self.d, unsafe { ptr::Unique::new(s) }))
         }
@@ -103,6 +103,25 @@ impl Display {
     /// Returns an error if the window does not exist.
     pub fn window<'d>(&'d self, id: window::ID) -> Result<Window<'d>, &'static str> {
         Window::new(&self.d, id)
+    }
+    /// Gets the currently focused window
+    pub fn focus<'d>(&'d self) -> Result<Option<Window<'d>>, &'static str> {
+        let mut id = 0;
+        let mut revert = 0;
+        let ok = unsafe {
+            xlib::XGetInputFocus(*self.d, &mut id, &mut revert) > 0
+        };
+        if ok {
+            const NONE: u64 = 0; /* xlib::None, which is commented out for no reason */
+            const POINTER_ROOT: u64 = xlib::PointerRoot as u64;
+            match id {
+                NONE  => Ok(None),
+                POINTER_ROOT => Ok(None),
+                i => Window::new(&self.d, i.into()).map(|w| Some(w))
+            }
+        } else {
+            Err("XGetInputFocus() failed")
+        }
     }
 }
 

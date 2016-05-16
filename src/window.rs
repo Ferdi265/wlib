@@ -178,6 +178,26 @@ impl<'d> Window<'d> {
             }
         }).and_then(|_| self.update_attrs())
     }
+    /// Focuses the window
+    ///
+    /// Passes `RevertToPointerRoot` and `CurrentTime`.
+    ///
+    /// Returns an error message if the call to `XSetInputFocus()` failed.
+    pub fn focus(&self) -> Result<(), &'static str> {
+        let ok = unsafe {
+            xlib::XSetInputFocus(**self.d, self.id().into(), xlib::RevertToPointerRoot, xlib::CurrentTime) > 0
+        };
+        if ok {
+            Ok(())
+        } else {
+            Err("XSetInputFocus() failed")
+        }
+    }
+    /// Returns the children of the window
+    ///
+    /// Returns an error message if the call to `XQueryTree()` failed or if it
+    /// returned NULL with an `n` greater than zero. Also returns errors if any
+    /// of the children give errors at the `XGetWindowAttributes()` call.
     pub fn children(&self) -> Result<Vec<Window<'d>>, &'static str> {
         Ok(()).and_then(|_| {
             let mut _i = (0, 0);

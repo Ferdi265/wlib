@@ -231,7 +231,7 @@ impl<'d> Window<'d> {
         })
     }
     pub fn id(&self) -> ID {
-        self.w.into()
+        self.w
     }
     pub fn x(&self) -> i32 {
         self.attrs.x

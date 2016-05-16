@@ -79,6 +79,18 @@ Lists the children of wid, defaults to the root window.
 
 Maps or unmaps the window.
 
+### wminfo
+
+`wminfo [-xy] [wid]`
+
+Mouse pointer coordinates relative to win, defaults to root window.
+
+### wmmove
+
+`wmmove [-ra] [wid]`
+
+Moves mouse pointer relatively, absolutely, or offset to the origin of wid.
+
 ### wmove
 
 `wmove [-ra] x y wid`

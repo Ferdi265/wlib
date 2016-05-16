@@ -190,6 +190,36 @@ impl<'d> Window<'d> {
             }
         }).and_then(|_| self.update_attrs())
     }
+    /// Destroys the window
+    ///
+    /// Returns an error message if the call to `XDestroyWindow()` failed. If
+    /// this call succeeds, the window should not exist any more and subsequent
+    /// method calls on the window will return errors.
+    pub fn destroy(&mut self) -> Result<(), &'static str> {
+        let ok = unsafe {
+            xlib::XDestroyWindow(**self.d, self.id().into()) > 0
+        };
+        if ok {
+            Ok(())
+        } else {
+            Err("XDestroyWindow() failed")
+        }
+    }
+    /// Destroys the window and kills the controlling client
+    ///
+    /// Returns an error message if the call to `XKillClient()` failed. If this
+    /// call succeeds, the window should not exist any more and subsequent
+    /// method calls on the window will return errors.
+    pub fn kill(&mut self) -> Result<(), &'static str> {
+        let ok = unsafe {
+            xlib::XKillClient(**self.d, self.id().into()) > 0
+        };
+        if ok {
+            Ok(())
+        } else {
+            Err("XDestroyWindow() failed")
+        }
+    }
     /// Focuses the window
     ///
     /// Passes `RevertToPointerRoot` and `CurrentTime`.

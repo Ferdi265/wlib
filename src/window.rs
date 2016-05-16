@@ -305,6 +305,16 @@ impl<'d> Window<'d> {
         let ptr = try!(self.pointer_direct());
         ptr.wpos.ok_or("window not on same screen as pointer")
     }
+    pub fn warp_pointer(&self, x: i32, y: i32) -> Result<(), &'static str> {
+        let ok = unsafe {
+            xlib::XWarpPointer(self.d.xlib_display(), 0 /* xlib::None */, self.id().into(), 0, 0, 0, 0, x, y) > 0
+        };
+        if ok {
+            Ok(())
+        } else {
+            Err("XWarpPointer() failed")
+        }
+    }
     /// Checks if the window still exists
     ///
     /// Calls `XGetWindowAttributes()` and throws away the result.

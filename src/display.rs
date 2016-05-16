@@ -13,7 +13,7 @@ unsafe extern "C" fn x_noop_error_handler(_: *mut xlib::Display, _: *mut xlib::X
 }
 
 pub struct Display {
-    pub(super) d: ptr::Unique<xlib::Display>
+    d: ptr::Unique<xlib::Display>
 }
 
 impl Display {
@@ -84,6 +84,20 @@ impl Display {
     pub fn pointer(&self) -> Result<(i32, i32), &'static str> {
         let scrn = try!(self.screen());
         scrn.pointer()
+    }
+    pub fn warp_pointer_absolute(&self, x: i32, y: i32) -> Result<(), &'static str> {
+        let scrn = try!(self.screen());
+        scrn.warp_pointer(x, y)
+    }
+    pub fn warp_pointer_relative(&self, x: i32, y: i32) -> Result<(), &'static str> {
+        let ok = unsafe {
+            xlib::XWarpPointer(self.xlib_display(), 0 /* xlib::None */, 0 /* xlib::None */, 0, 0, 0, 0, x, y) > 0
+        };
+        if ok {
+            Ok(())
+        } else {
+            Err("XWarpPointer() failed")
+        }
     }
     /// Get the number of screens the display has
     pub fn screens(&self) -> i32 {

@@ -29,6 +29,10 @@ impl<'d> Screen<'d> {
         let ptr = try!(win.pointer_direct());
         Ok(ptr.pos)
     }
+    pub fn warp_pointer(&self, x: i32, y: i32) -> Result<(), &'static str> {
+        let win = try!(self.root());
+        win.warp_pointer(x, y)
+    }
     /// Gets the root window of the screen
     ///
     /// Returns an error message if the root window does not exist.

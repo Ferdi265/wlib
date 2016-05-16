@@ -43,6 +43,18 @@ options are available, but omitted here for brevity.
 
 Change a window's border color and width.
 
+### wfocus
+
+`wfocus wid`
+
+Focus a window.
+
+### wignore
+
+`wignore [-rs] wid`
+
+Set or reset `override_redirect`.
+
 ### winfo
 
 `winfo [-xywhbimo] wid`
@@ -66,6 +78,12 @@ Move a window relatively or absolutely.
 `wresize [-ra] x y wid`
 
 Resize a window relatively or absolutely.
+
+### wstack
+
+`wstack [-rao] wid`
+
+Change stacking order of windows.
 
 ### wwindow
 

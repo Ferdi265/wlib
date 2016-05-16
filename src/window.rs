@@ -96,6 +96,18 @@ impl<'d> Window<'d> {
         c.border_width(b);
         self.change(&c)
     }
+    /// Changes the window's position on the stack
+    ///
+    /// Changes window position to the top or bottom of the stack, or inverts
+    /// its position depending on `m`.
+    ///
+    /// Returns an error message if the call to `XConfigureWindow()` or the
+    /// call to `XGetWindowAttributes()` after restacking failed.
+    pub fn restack(&mut self, m: StackMode) -> Result<(), &'static str> {
+        let mut c = Changes::new();
+        c.stack(m);
+        self.change(&c)
+    }
     /// Changes the window border color
     ///
     /// Changes the window border to the color `color`
@@ -265,12 +277,14 @@ impl<'d> Window<'d> {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
 pub enum StackMode {
     Above = 0,
     Below = 1,
     Opposite = 4
 }
 
+#[derive(Clone)]
 pub struct Changes {
     changes: xlib::XWindowChanges,
     attrs: xlib::XSetWindowAttributes,

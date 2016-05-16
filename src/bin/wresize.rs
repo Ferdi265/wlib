@@ -17,7 +17,7 @@ fn main() {
     parse_args!{
         description: "resize window",
         flag mode: Mode = Mode::Relative,
-            (&["-r", "--relative"], Mode::Relative, "resize relatively"),
+            (&["-r", "--relative"], Mode::Relative, "resize relatively (default)"),
             (&["-a", "--absolute"], Mode::Absolute, "resize absolutely"),
         arg x: i32,
             ("x", "x coordinate"),

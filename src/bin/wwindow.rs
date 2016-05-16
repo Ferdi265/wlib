@@ -16,7 +16,7 @@ fn main() {
     parse_args!{
         description: "returns special windows",
         flag mode: Mode = Mode::Root,
-            (&["-r", "--root"], Mode::Root, "root window"),
+            (&["-r", "--root"], Mode::Root, "root window (default)"),
             (&["-f", "--focus"], Mode::Focus, "focused window")
     }
 

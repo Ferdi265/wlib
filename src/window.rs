@@ -301,10 +301,16 @@ impl<'d> Window<'d> {
     pub(super) fn pointer_direct(&self) -> Result<display::Pointer, &'static str> {
         self.d.pointer_direct(self)
     }
+    /// Gets the pointer coordinates relative to this window.
+    ///
+    /// Returns an error if the call to `XQueryPointer()` failed.
     pub fn pointer(&self) -> Result<(i32, i32), &'static str> {
         let ptr = try!(self.pointer_direct());
         ptr.wpos.ok_or("window not on same screen as pointer")
     }
+    /// Moves the pointer relative to this window.
+    ///
+    /// Returns an error if the call to `XWarpPointer()` failed.
     pub fn warp_pointer(&self, x: i32, y: i32) -> Result<(), &'static str> {
         let ok = unsafe {
             xlib::XWarpPointer(self.d.xlib_display(), 0 /* xlib::None */, self.id().into(), 0, 0, 0, 0, x, y) > 0

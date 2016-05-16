@@ -81,14 +81,23 @@ impl Display {
             })
         }
     }
+    /// Pointer coordinates
+    ///
+    /// Returns an error if the call to `XQueryPointer()` fails.
     pub fn pointer(&self) -> Result<(i32, i32), &'static str> {
         let scrn = try!(self.screen());
         scrn.pointer()
     }
+    /// Moves pointer absolutely
+    ///
+    /// Returns an error if the call to `XWarpPointer()` fails.
     pub fn warp_pointer_absolute(&self, x: i32, y: i32) -> Result<(), &'static str> {
         let scrn = try!(self.screen());
         scrn.warp_pointer(x, y)
     }
+    /// Moves pointer absolutely
+    ///
+    /// Returns an error if the call to `XWarpPointer()` fails.
     pub fn warp_pointer_relative(&self, x: i32, y: i32) -> Result<(), &'static str> {
         let ok = unsafe {
             xlib::XWarpPointer(self.xlib_display(), 0 /* xlib::None */, 0 /* xlib::None */, 0, 0, 0, 0, x, y) > 0

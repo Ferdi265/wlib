@@ -24,11 +24,17 @@ impl<'d> Screen<'d> {
     pub(super) fn xlib_screen(&self) -> *mut xlib::Screen {
         *self.s
     }
+    /// Returns the pointer coordinates relative to this screen's root window.
+    ///
+    /// Returns an error if the call to `XQueryPointer()` fails.
     pub fn pointer(&self) -> Result<(i32, i32), &'static str> {
         let win = try!(self.root());
         let ptr = try!(win.pointer_direct());
         Ok(ptr.pos)
     }
+    /// Moves the pointer coordinates relative to this screen's root window.
+    ///
+    /// Returns an error if the call to `XQueryPointer()` fails.
     pub fn warp_pointer(&self, x: i32, y: i32) -> Result<(), &'static str> {
         let win = try!(self.root());
         win.warp_pointer(x, y)

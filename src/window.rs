@@ -7,16 +7,19 @@ use std::ptr;
 
 use x11::xlib;
 
+use super::display;
+use super::Display;
+use super::Screen;
 use super::Color;
 
 pub struct Window<'d> {
     w: ID,
-    d: &'d ptr::Unique<xlib::Display>,
+    d: &'d Display,
     attrs: xlib::XWindowAttributes
 }
 
 impl<'d> Window<'d> {
-    pub(super) fn new(d: &'d ptr::Unique<xlib::Display>, id: ID) -> Result<Self, &'static str> {
+    pub(super) fn new(d: &'d Display, id: ID) -> Result<Self, &'static str> {
         let mut w = Window {
             w: id,
             d: d,
@@ -24,16 +27,35 @@ impl<'d> Window<'d> {
                 mem::zeroed()
             }
         };
-        w.update_attrs().map(|_| w)
+        w.update().map(|_| w)
     }
-    fn update_attrs(&mut self) -> Result<(), &'static str> {
+    fn get_attrs(&self) -> Result<xlib::XWindowAttributes, &'static str> {
+        let mut attrs = unsafe {
+            mem::zeroed()
+        };
         let ok = unsafe {
-            xlib::XGetWindowAttributes(**self.d, self.w.into(), &mut self.attrs) == 1
+            xlib::XGetWindowAttributes(self.d.xlib_display(), self.w.into(), &mut attrs) == 1
         };
         if ok {
-            Ok(())
+            Ok(attrs)
         } else {
             Err("XGetWindowAttributes() failed")
+        }
+    }
+    /// Updates the window
+    ///
+    /// Gets the window attributes, useful if the window has moved or was
+    /// changed otherwise.
+    ///
+    /// Returns an error message if the call to `XGetWindowAttributes()`
+    /// failed.
+    pub fn update(&mut self) -> Result<(), &'static str> {
+        match self.get_attrs() {
+            Ok(a) => {
+                self.attrs = a;
+                Ok(())
+            },
+            Err(e) => Err(e)
         }
     }
     /// Moves the window
@@ -135,10 +157,10 @@ impl<'d> Window<'d> {
     /// Returns an error message if the call to `XMapWindow()` failed.
     pub fn map(&mut self) -> Result<(), &'static str> {
         let ok = unsafe {
-            xlib::XMapWindow(**self.d, self.w.into()) == 1
+            xlib::XMapWindow(self.d.xlib_display(), self.w.into()) == 1
         };
         if ok {
-            self.update_attrs()
+            self.update()
         } else {
             Err("XMapWindow() failed")
         }
@@ -148,10 +170,10 @@ impl<'d> Window<'d> {
     /// Returns an error message if the call to `XUnmapWindow()` failed.
     pub fn unmap(&mut self) -> Result<(), &'static str> {
         let ok = unsafe {
-            xlib::XUnmapWindow(**self.d, self.w.into()) == 1
+            xlib::XUnmapWindow(self.d.xlib_display(), self.w.into()) == 1
         };
         if ok {
-            self.update_attrs()
+            self.update()
         } else {
             Err("XUnmapWindow() failed")
         }
@@ -167,11 +189,11 @@ impl<'d> Window<'d> {
     /// - `XConfigureWindow()` if `x`, `y`, `width`, `height` or `border_width`
     ///   are changed
     /// - `XGetWindowAttributes()`
-    pub fn change<'w>(&'w mut self, c: &Changes) -> Result<(), &'static str> {
+    pub fn change(&mut self, c: &Changes) -> Result<(), &'static str> {
         Ok(()).and_then(|_| {
             let mut attrs = c.attrs;
             let ok = unsafe {
-                xlib::XChangeWindowAttributes(**self.d, self.id().into(), c.amask, &mut attrs) == 1
+                xlib::XChangeWindowAttributes(self.d.xlib_display(), self.id().into(), c.amask, &mut attrs) == 1
             };
             if ok {
                 Ok(())
@@ -181,14 +203,14 @@ impl<'d> Window<'d> {
         }).and_then(|_| {
             let mut changes = c.changes;
             let ok = unsafe {
-                xlib::XConfigureWindow(**self.d, self.id().into(), c.cmask as u32, &mut changes) == 1
+                xlib::XConfigureWindow(self.d.xlib_display(), self.id().into(), c.cmask as u32, &mut changes) == 1
             };
             if ok {
                 Ok(())
             } else {
                 Err("XConfigureWindow() failed")
             }
-        }).and_then(|_| self.update_attrs())
+        }).and_then(|_| self.update())
     }
     /// Destroys the window
     ///
@@ -197,7 +219,7 @@ impl<'d> Window<'d> {
     /// method calls on the window will return errors.
     pub fn destroy(&mut self) -> Result<(), &'static str> {
         let ok = unsafe {
-            xlib::XDestroyWindow(**self.d, self.id().into()) > 0
+            xlib::XDestroyWindow(self.d.xlib_display(), self.id().into()) > 0
         };
         if ok {
             Ok(())
@@ -212,7 +234,7 @@ impl<'d> Window<'d> {
     /// method calls on the window will return errors.
     pub fn kill(&mut self) -> Result<(), &'static str> {
         let ok = unsafe {
-            xlib::XKillClient(**self.d, self.id().into()) > 0
+            xlib::XKillClient(self.d.xlib_display(), self.id().into()) > 0
         };
         if ok {
             Ok(())
@@ -227,7 +249,7 @@ impl<'d> Window<'d> {
     /// Returns an error message if the call to `XSetInputFocus()` failed.
     pub fn focus(&self) -> Result<(), &'static str> {
         let ok = unsafe {
-            xlib::XSetInputFocus(**self.d, self.id().into(), xlib::RevertToPointerRoot, xlib::CurrentTime) > 0
+            xlib::XSetInputFocus(self.d.xlib_display(), self.id().into(), xlib::RevertToPointerRoot, xlib::CurrentTime) > 0
         };
         if ok {
             Ok(())
@@ -246,7 +268,7 @@ impl<'d> Window<'d> {
             let mut n = 0;
             let mut ws = ptr::null_mut();
             let ok = unsafe {
-                xlib::XQueryTree(**self.d, self.id().into(), &mut _i.0, &mut _i.1, &mut ws, &mut n) > 0
+                xlib::XQueryTree(self.d.xlib_display(), self.id().into(), &mut _i.0, &mut _i.1, &mut ws, &mut n) > 0
             };
             if ok {
                 Ok((ws, n))
@@ -271,6 +293,29 @@ impl<'d> Window<'d> {
                 Ok(children)
             }
         })
+    }
+    /// Gets the screen this window is in
+    pub fn screen(&self) -> Screen<'d> {
+        Screen::new(self.d, unsafe { ptr::Unique::new(self.attrs.screen) })
+    }
+    pub(super) fn pointer_direct(&self) -> Result<display::Pointer, &'static str> {
+        self.d.pointer_direct(self)
+    }
+    pub fn pointer(&self) -> Result<(i32, i32), &'static str> {
+        let ptr = try!(self.pointer_direct());
+        ptr.wpos.ok_or("window not on same screen as pointer")
+    }
+    /// Checks if the window still exists
+    ///
+    /// Calls `XGetWindowAttributes()` and throws away the result.
+    ///
+    /// Returns true if `XGetWindowAttributes()` didn't return an
+    /// error.
+    pub fn exists(&self) -> bool {
+        match self.get_attrs() {
+            Ok(_) => true,
+            Err(_) => false
+        }
     }
     pub fn id(&self) -> ID {
         self.w

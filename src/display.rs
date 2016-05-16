@@ -55,54 +55,71 @@ impl Display {
     pub fn open() -> Result<Self, &'static str> {
         return Self::open_direct(ptr::null());
     }
+    pub(super) fn xlib_display(&self) -> *mut xlib::Display {
+        *self.d
+    }
+    pub(super) fn pointer_direct(&self, w: &Window) -> Result<Pointer, &'static str> {
+        let mut root = 0;
+        let mut _c = 0;
+        let mut pos = (0, 0);
+        let mut wpos = (0, 0);
+        let mut _m = 0;
+        let same_screen = unsafe {
+            xlib::XQueryPointer(self.xlib_display(), w.id().into(), &mut root, &mut _c, &mut pos.0, &mut pos.1, &mut wpos.0, &mut wpos.1, &mut _m) > 0
+        };
+        if root == 0 /* xlib::None */ {
+            Err("XQueryPointer() failed")
+        } else {
+            let wpos = if same_screen {
+                Some(wpos)
+            } else {
+                None
+            };
+            Ok(Pointer {
+                pos: pos,
+                wpos: wpos
+            })
+        }
+    }
+    pub fn pointer(&self) -> Result<(i32, i32), &'static str> {
+        let scrn = try!(self.screen());
+        scrn.pointer()
+    }
     /// Get the number of screens the display has
     pub fn screens(&self) -> i32 {
-        unsafe { xlib::XScreenCount(*self.d) }
+        unsafe { xlib::XScreenCount(self.xlib_display()) }
+    }
+    pub fn screen_default(&self) -> i32 {
+        unsafe { xlib::XDefaultScreen(self.xlib_display()) }
     }
     /// Get a screen from the display
     ///
     /// Gets the screen with the number `screennum` from the display
     ///
-    /// Returns an error message if any of these statements are true:
-    ///
-    /// - `screennum` is less than 0
-    /// - `screennum` is greater or equal to `display.screens()`
-    /// - `XScreenOfDisplay()` returned a NULL pointer
+    /// Returns an error message if the call to `XScreenOfDisplay()` returned a
+    /// NULL pointer.
     pub fn screen_num<'d>(&'d self, screennum: i32) -> Result<Screen<'d>, &'static str> {
-        if screennum < 0 {
-            return Err("screennum less than 0");
-        }
-        if screennum >= self.screens() {
-            return Err("screennum greater or equal to screen count");
-        }
         let s = unsafe {
-            xlib::XScreenOfDisplay(*self.d, screennum)
+            xlib::XScreenOfDisplay(self.xlib_display(), screennum)
         };
         if s.is_null() {
             Err("XScreenOfDisplay() failed")
         } else {
-            Ok(Screen::new(&self.d, unsafe { ptr::Unique::new(s) }))
+            Ok(Screen::new(&self, unsafe { ptr::Unique::new(s) }))
         }
     }
     /// Get the default screen associated with the display
     ///
-    /// Returns an error message if the call to `XDefaultScreenOfDisplay`
-    /// returned a NULL pointer.
+    /// Returns an error message if the call to `XScreenOfDisplay()` returned a
+    /// NULL pointer.
     pub fn screen<'d>(&'d self) -> Result<Screen<'d>, &'static str> {
-        let s = unsafe {
-            xlib::XDefaultScreenOfDisplay(*self.d)
-        };
-        if s.is_null() {
-            Err("XDefaultScreenOfDisplay() failed")
-        } else {
-            Ok(Screen::new(&self.d, unsafe { ptr::Unique::new(s) }))
-        }
+        self.screen_num(self.screen_default())
     }
     /// Gets the window with the specified window id
     ///
     /// Returns an error if the window does not exist.
     pub fn window<'d>(&'d self, id: window::ID) -> Result<Window<'d>, &'static str> {
-        Window::new(&self.d, id)
+        Window::new(&self, id)
     }
     /// Gets the currently focused window
     pub fn focus<'d>(&'d self) -> Result<Option<Window<'d>>, &'static str> {
@@ -117,7 +134,7 @@ impl Display {
             match id {
                 NONE  => Ok(None),
                 POINTER_ROOT => Ok(None),
-                i => Window::new(&self.d, i.into()).map(|w| Some(w))
+                i => Window::new(&self, i.into()).map(|w| Some(w))
             }
         } else {
             Err("XGetInputFocus() failed")
@@ -130,7 +147,12 @@ impl Drop for Display {
     fn drop(&mut self) {
         unsafe {
             // NOTE: XCloseDisplay() is hardcoded to return 0, so ignore it
-            xlib::XCloseDisplay(*self.d);
+            xlib::XCloseDisplay(self.xlib_display());
         }
     }
+}
+
+pub(super) struct Pointer {
+    pub(super) pos: (i32, i32),
+    pub(super) wpos: Option<(i32, i32)>
 }

@@ -3,15 +3,16 @@ use std::ptr;
 
 use x11::xlib;
 
+use super::Display;
 use super::Window;
 
 pub struct Screen<'d> {
-    d: &'d ptr::Unique<xlib::Display>,
+    d: &'d Display,
     s: ptr::Unique<xlib::Screen>
 }
 
 impl<'d> Screen<'d> {
-    pub(super) fn new(d: &'d ptr::Unique<xlib::Display>, s: ptr::Unique<xlib::Screen>) -> Self {
+    pub(super) fn new(d: &'d Display, s: ptr::Unique<xlib::Screen>) -> Self {
         Screen {
             d: d,
             s: s
@@ -19,6 +20,14 @@ impl<'d> Screen<'d> {
     }
     fn get(&self) -> &xlib::Screen {
         unsafe { self.s.get() }
+    }
+    pub(super) fn xlib_screen(&self) -> *mut xlib::Screen {
+        *self.s
+    }
+    pub fn pointer(&self) -> Result<(i32, i32), &'static str> {
+        let win = try!(self.root());
+        let ptr = try!(win.pointer_direct());
+        Ok(ptr.pos)
     }
     /// Gets the root window of the screen
     ///
@@ -42,9 +51,13 @@ impl<'d> Drop for Screen<'d> {
     ///
     /// Panics if the call to `XFree()` fails.
     /// This should never happen.
+    ///
+    /// This function apparrently has no effect on screens as multiple screen
+    /// pointers created by `XScreenOfDisplay()` are exactly equal and dropping
+    /// one, which calls `XFree()` has no effect on the others. Strange.
     fn drop(&mut self) {
         let ok = unsafe {
-            xlib::XFree(mem::transmute(*self.s)) == 1
+            xlib::XFree(mem::transmute(self.xlib_screen())) == 1
         };
         if !ok {
             panic!("XFree() failed");

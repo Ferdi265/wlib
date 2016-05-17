@@ -59,22 +59,3 @@ impl<'d> Screen<'d> {
         shapes::PositionedRectangle::new(0, 0, self.width(), self.height())
     }
 }
-
-impl<'d> Drop for Screen<'d> {
-    /// Frees the memory for the `Screen` when it is dropped
-    ///
-    /// Panics if the call to `XFree()` fails.
-    /// This should never happen.
-    ///
-    /// This function apparrently has no effect on screens as multiple screen
-    /// pointers created by `XScreenOfDisplay()` are exactly equal and dropping
-    /// one, which calls `XFree()` has no effect on the others. Strange.
-    fn drop(&mut self) {
-        let ok = unsafe {
-            xlib::XFree(mem::transmute(self.xlib_screen())) == 1
-        };
-        if !ok {
-            panic!("XFree() failed");
-        }
-    }
-}

@@ -6,7 +6,6 @@ pub mod display;
 pub mod screen;
 pub mod window;
 pub mod color;
-pub mod cli;
 
 pub use display::Display;
 pub use screen::Screen;

@@ -1,11 +1,8 @@
 [package]
-name = "wtools"
+name = "wlib"
 version = "0.8.0"
 authors = ["theFerdi265 <theferdi265@gmail.com>"]
 
 [dependencies.x11]
 version = "2.5.1"
 features = ["xlib"]
-
-[dependencies.argparse]
-version = "0.2.1"

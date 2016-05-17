@@ -7,6 +7,7 @@ use x11::xlib;
 use super::Screen;
 use super::Window;
 use super::window;
+use super::shapes;
 
 unsafe extern "C" fn x_noop_error_handler(_: *mut xlib::Display, _: *mut xlib::XErrorEvent) -> i32 {
     0
@@ -61,11 +62,11 @@ impl Display {
     pub(super) fn pointer_direct(&self, w: &Window) -> Result<Pointer, &'static str> {
         let mut root = 0;
         let mut _c = 0;
-        let mut pos = (0, 0);
-        let mut wpos = (0, 0);
+        let mut pos = shapes::Point::new(0, 0);
+        let mut wpos = shapes::Point::new(0, 0);
         let mut _m = 0;
         let same_screen = unsafe {
-            xlib::XQueryPointer(self.xlib_display(), w.id().into(), &mut root, &mut _c, &mut pos.0, &mut pos.1, &mut wpos.0, &mut wpos.1, &mut _m) > 0
+            xlib::XQueryPointer(self.xlib_display(), w.id().into(), &mut root, &mut _c, &mut pos.x, &mut pos.y, &mut wpos.x, &mut wpos.y, &mut _m) > 0
         };
         if root == 0 /* xlib::None */ {
             Err("XQueryPointer() failed")
@@ -84,23 +85,23 @@ impl Display {
     /// Pointer coordinates
     ///
     /// Returns an error if the call to `XQueryPointer()` fails.
-    pub fn pointer(&self) -> Result<(i32, i32), &'static str> {
+    pub fn pointer(&self) -> Result<shapes::Point, &'static str> {
         let scrn = try!(self.screen());
         scrn.pointer()
     }
     /// Moves pointer absolutely
     ///
     /// Returns an error if the call to `XWarpPointer()` fails.
-    pub fn warp_pointer_absolute(&self, x: i32, y: i32) -> Result<(), &'static str> {
+    pub fn warp_pointer_absolute(&self, p: shapes::Point) -> Result<(), &'static str> {
         let scrn = try!(self.screen());
-        scrn.warp_pointer(x, y)
+        scrn.warp_pointer(p)
     }
     /// Moves pointer absolutely
     ///
     /// Returns an error if the call to `XWarpPointer()` fails.
-    pub fn warp_pointer_relative(&self, x: i32, y: i32) -> Result<(), &'static str> {
+    pub fn warp_pointer_relative(&self, p: shapes::Point) -> Result<(), &'static str> {
         let ok = unsafe {
-            xlib::XWarpPointer(self.xlib_display(), 0 /* xlib::None */, 0 /* xlib::None */, 0, 0, 0, 0, x, y) > 0
+            xlib::XWarpPointer(self.xlib_display(), 0 /* xlib::None */, 0 /* xlib::None */, 0, 0, 0, 0, p.x, p.y) > 0
         };
         if ok {
             Ok(())
@@ -109,11 +110,11 @@ impl Display {
         }
     }
     /// Get the number of screens the display has
-    pub fn screens(&self) -> i32 {
-        unsafe { xlib::XScreenCount(self.xlib_display()) }
+    pub fn screens(&self) -> u32 {
+        unsafe { xlib::XScreenCount(self.xlib_display()) as u32 }
     }
-    pub fn screen_default(&self) -> i32 {
-        unsafe { xlib::XDefaultScreen(self.xlib_display()) }
+    pub fn screen_default(&self) -> u32 {
+        unsafe { xlib::XDefaultScreen(self.xlib_display()) as u32 }
     }
     /// Get a screen from the display
     ///
@@ -121,9 +122,9 @@ impl Display {
     ///
     /// Returns an error message if the call to `XScreenOfDisplay()` returned a
     /// NULL pointer.
-    pub fn screen_num<'d>(&'d self, screennum: i32) -> Result<Screen<'d>, &'static str> {
+    pub fn screen_num<'d>(&'d self, screennum: u32) -> Result<Screen<'d>, &'static str> {
         let s = unsafe {
-            xlib::XScreenOfDisplay(self.xlib_display(), screennum)
+            xlib::XScreenOfDisplay(self.xlib_display(), screennum as i32)
         };
         if s.is_null() {
             Err("XScreenOfDisplay() failed")
@@ -176,6 +177,6 @@ impl Drop for Display {
 }
 
 pub(super) struct Pointer {
-    pub(super) pos: (i32, i32),
-    pub(super) wpos: Option<(i32, i32)>
+    pub(super) pos: shapes::Point,
+    pub(super) wpos: Option<shapes::Point>
 }

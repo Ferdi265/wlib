@@ -1,4 +1,4 @@
-#![feature(pub_restricted, unique)]
+#![feature(pub_restricted, unique, associated_consts)]
 
 extern crate x11;
 
@@ -6,6 +6,7 @@ pub mod display;
 pub mod screen;
 pub mod window;
 pub mod color;
+pub mod shapes;
 
 pub use display::Display;
 pub use screen::Screen;

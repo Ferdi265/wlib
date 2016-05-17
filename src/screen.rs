@@ -5,6 +5,7 @@ use x11::xlib;
 
 use super::Display;
 use super::Window;
+use super::shapes;
 
 pub struct Screen<'d> {
     d: &'d Display,
@@ -27,7 +28,7 @@ impl<'d> Screen<'d> {
     /// Returns the pointer coordinates relative to this screen's root window.
     ///
     /// Returns an error if the call to `XQueryPointer()` fails.
-    pub fn pointer(&self) -> Result<(i32, i32), &'static str> {
+    pub fn pointer(&self) -> Result<shapes::Point, &'static str> {
         let win = try!(self.root());
         let ptr = try!(win.pointer_direct());
         Ok(ptr.pos)
@@ -35,9 +36,9 @@ impl<'d> Screen<'d> {
     /// Moves the pointer coordinates relative to this screen's root window.
     ///
     /// Returns an error if the call to `XQueryPointer()` fails.
-    pub fn warp_pointer(&self, x: i32, y: i32) -> Result<(), &'static str> {
+    pub fn warp_pointer(&self, p: shapes::Point) -> Result<(), &'static str> {
         let win = try!(self.root());
-        win.warp_pointer(x, y)
+        win.warp_pointer(p)
     }
     /// Gets the root window of the screen
     ///
@@ -47,12 +48,15 @@ impl<'d> Screen<'d> {
         Window::new(self.d, self.get().root.into())
     }
     /// Gets the width of the screen in pixels
-    pub fn width(&self) -> i32 {
-        self.get().width
+    pub fn width(&self) -> u32 {
+        self.get().width as u32
     }
     /// Gets the height of the screen in pixels
-    pub fn height(&self) -> i32 {
-        self.get().height
+    pub fn height(&self) -> u32 {
+        self.get().height as u32
+    }
+    pub fn rectangle(&self) -> shapes::PositionedRectangle {
+        shapes::PositionedRectangle::new(0, 0, self.width(), self.height())
     }
 }
 

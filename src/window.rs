@@ -11,6 +11,7 @@ use super::display;
 use super::Display;
 use super::Screen;
 use super::Color;
+use super::shapes;
 
 pub struct Window<'d> {
     w: ID,
@@ -88,7 +89,7 @@ impl<'d> Window<'d> {
     ///
     /// Returns an error message if the call to `XConfigureWindow()` or the
     /// call to `XGetWindowAttributes()` after resizing failed.
-    pub fn resize_absolute(&mut self, w: i32, h: i32) -> Result<(), &'static str> {
+    pub fn resize_absolute(&mut self, w: u32, h: u32) -> Result<(), &'static str> {
         let mut c = Changes::new();
         c.width(w);
         c.height(h);
@@ -103,8 +104,8 @@ impl<'d> Window<'d> {
     /// call to `XGetWindowAttributes()` after resizing failed.
     pub fn resize_relative(&mut self, w: i32, h: i32) -> Result<(), &'static str> {
         let mut c = Changes::new();
-        c.width(self.width() + w);
-        c.height(self.height() + h);
+        c.width((self.width() as i32 + w) as u32);
+        c.height((self.height() as i32 + h) as u32);
         self.change(&c)
     }
     /// Resizes the window border
@@ -113,7 +114,7 @@ impl<'d> Window<'d> {
     ///
     /// Returns an error message if the call to `XConfigureWindow()` or the
     /// call to `XGetWindowAttributes()` after resizing failed.
-    pub fn border_resize(&mut self, b: i32) -> Result<(), &'static str> {
+    pub fn border_resize(&mut self, b: u32) -> Result<(), &'static str> {
         let mut c = Changes::new();
         c.border_width(b);
         self.change(&c)
@@ -304,16 +305,16 @@ impl<'d> Window<'d> {
     /// Gets the pointer coordinates relative to this window.
     ///
     /// Returns an error if the call to `XQueryPointer()` failed.
-    pub fn pointer(&self) -> Result<(i32, i32), &'static str> {
+    pub fn pointer(&self) -> Result<shapes::Point, &'static str> {
         let ptr = try!(self.pointer_direct());
         ptr.wpos.ok_or("window not on same screen as pointer")
     }
     /// Moves the pointer relative to this window.
     ///
     /// Returns an error if the call to `XWarpPointer()` failed.
-    pub fn warp_pointer(&self, x: i32, y: i32) -> Result<(), &'static str> {
+    pub fn warp_pointer(&self, p: shapes::Point) -> Result<(), &'static str> {
         let ok = unsafe {
-            xlib::XWarpPointer(self.d.xlib_display(), 0 /* xlib::None */, self.id().into(), 0, 0, 0, 0, x, y) > 0
+            xlib::XWarpPointer(self.d.xlib_display(), 0 /* xlib::None */, self.id().into(), 0, 0, 0, 0, p.x, p.y) > 0
         };
         if ok {
             Ok(())
@@ -342,20 +343,37 @@ impl<'d> Window<'d> {
     pub fn y(&self) -> i32 {
         self.attrs.y
     }
-    pub fn width(&self) -> i32 {
-        self.attrs.width
+    pub fn width(&self) -> u32 {
+        self.attrs.width as u32
     }
-    pub fn height(&self) -> i32 {
-        self.attrs.height
+    pub fn height(&self) -> u32 {
+        self.attrs.height as u32
     }
-    pub fn position(&self) -> (i32, i32) {
-        (self.x(), self.y())
+    pub fn border_width(&self) -> u32 {
+        self.attrs.border_width as u32
     }
-    pub fn size(&self) -> (i32, i32) {
-        (self.width(), self.height())
+    pub fn frame_position(&self) -> shapes::Point {
+        shapes::Point::new(self.x(), self.y())
     }
-    pub fn border_width(&self) -> i32 {
-        self.attrs.border_width
+    pub fn frame_size(&self) -> shapes::Rectangle {
+        shapes::Rectangle::new(self.width() + self.border_width() * 2, self.height() + self.border_width() * 2)
+    }
+    pub fn frame(&self) -> shapes::PositionedRectangle {
+        let p = self.frame_position();
+        let r = self.frame_size();
+        shapes::PositionedRectangle::new(p.x, p.y, r.w, r.h)
+    }
+    pub fn content_position(&self) -> shapes::Point {
+        let bw = self.border_width() as i32;
+        self.frame_position() + shapes::Point::new(bw, bw)
+    }
+    pub fn content_size(&self) -> shapes::Rectangle {
+        shapes::Rectangle::new(self.width(), self.height())
+    }
+    pub fn content(&self) -> shapes::PositionedRectangle {
+        let p = self.content_position();
+        let r = self.content_size();
+        shapes::PositionedRectangle::new(p.x, p.y, r.w, r.h)
     }
     pub fn ignored(&self) -> bool {
         self.attrs.override_redirect == 1
@@ -406,16 +424,16 @@ impl Changes {
         self.changes.y = y;
         self.cmask |= xlib::CWY;
     }
-    pub fn width(&mut self, width: i32) {
-        self.changes.width = width;
+    pub fn width(&mut self, width: u32) {
+        self.changes.width = width as i32;
         self.cmask |= xlib::CWWidth;
     }
-    pub fn height(&mut self, height: i32) {
-        self.changes.height = height;
+    pub fn height(&mut self, height: u32) {
+        self.changes.height = height as i32;
         self.cmask |= xlib::CWHeight;
     }
-    pub fn border_width(&mut self, border_width: i32) {
-        self.changes.border_width = border_width;
+    pub fn border_width(&mut self, border_width: u32) {
+        self.changes.border_width = border_width as i32;
         self.cmask |= xlib::CWBorderWidth;
     }
     pub fn stack(&mut self, stack: StackMode) {

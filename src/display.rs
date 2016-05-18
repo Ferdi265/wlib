@@ -40,7 +40,7 @@ impl Display {
     /// Returns an error message if either `dispname` is not a valid
     /// `std::ffi::CString` or the call to `XOpenDisplay()` returned a NULL
     /// pointer.
-    pub fn open_named(dispname: &'static str) -> Result<Self, &str> {
+    pub fn open_named(dispname: &str) -> Result<Self, &'static str> {
         let cs = try!(
             ffi::CString::new(dispname)
                 .map_err(|_| "CString::new() failed")
@@ -164,6 +164,23 @@ impl Display {
             Err("XGetInputFocus() failed")
         }
     }
+    pub fn atom(&self, name: &str) -> Result<Atom, &'static str> {
+        let cs = try!(
+            ffi::CString::new(name)
+                .map_err(|_| "CString::new() failed")
+        );
+        let atom = unsafe {
+            xlib::XInternAtom(self.xlib_display(), cs.as_ptr(), false as i32)
+        };
+        if atom == 0 /* xlib::None */ {
+            Err("XInternAtom() failed")
+        } else {
+            Ok(Atom {
+                id: atom,
+                name: name.to_string()
+            })
+        }
+    }
 }
 
 impl Drop for Display {
@@ -179,4 +196,10 @@ impl Drop for Display {
 pub(super) struct Pointer {
     pub(super) pos: shapes::Point,
     pub(super) wpos: Option<shapes::Point>
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct Atom {
+    id: u64,
+    pub name: String
 }

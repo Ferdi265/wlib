@@ -1,4 +1,3 @@
-use std::mem;
 use std::ptr;
 
 use x11::xlib;

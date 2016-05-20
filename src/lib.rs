@@ -2,6 +2,7 @@
 
 extern crate x11;
 
+mod ffi;
 pub mod display;
 pub mod screen;
 pub mod window;

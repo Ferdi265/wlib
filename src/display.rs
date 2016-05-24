@@ -1,6 +1,6 @@
-use std::os::raw;
+use std::ffi as stdffi;
 use std::ptr;
-use std::ffi;
+use super::ffi;
 
 use x11::xlib;
 
@@ -9,29 +9,13 @@ use super::Window;
 use super::window;
 use super::shapes;
 
-unsafe extern "C" fn x_noop_error_handler(_: *mut xlib::Display, _: *mut xlib::XErrorEvent) -> i32 {
-    0
-}
-
 pub struct Display {
-    d: ptr::Unique<xlib::Display>
+    d: ffi::XDisplay
 }
 
 impl Display {
-    fn new(d: ptr::Unique<xlib::Display>) -> Self {
-        Display { d: d }
-    }
-    fn open_direct(dispname: *const raw::c_char) -> Result<Self, &'static str> {
-        let d = unsafe {
-            // NOTE: register noop error handler to avoid crashes
-            xlib::XSetErrorHandler(Some(x_noop_error_handler));
-            xlib::XOpenDisplay(dispname)
-        };
-        if d.is_null() {
-            Err("XOpenDisplay() failed")
-        } else {
-            Ok(Display::new(unsafe { ptr::Unique::new(d) }))
-        }
+    fn open_direct(cs: Option<&stdffi::CStr>) -> Result<Display, &'static str> {
+        ffi::XOpenDisplay(cs).ok_or("could not open display").map(|d| Display { d: d })
     }
     /// Opens a connection to the Xorg display server
     ///
@@ -40,12 +24,9 @@ impl Display {
     /// Returns an error message if either `dispname` is not a valid
     /// `std::ffi::CString` or the call to `XOpenDisplay()` returned a NULL
     /// pointer.
-    pub fn open_named(dispname: &str) -> Result<Self, &'static str> {
-        let cs = try!(
-            ffi::CString::new(dispname)
-                .map_err(|_| "CString::new() failed")
-        );
-        return Self::open_direct(cs.as_ptr());
+    pub fn open_named(dispname: &str) -> Result<Display, &'static str> {
+        let cs = try!(stdffi::CString::new(dispname).map_err(|_| "dispname is not a valid CString"));
+        Display::open_direct(Some(&cs))
     }
     /// Opens a connection to the Xorg display server
     ///
@@ -53,11 +34,11 @@ impl Display {
     ///
     /// Returns an error message if the call to `XOpenDisplay()` returned a
     /// NULL pointer
-    pub fn open() -> Result<Self, &'static str> {
-        return Self::open_direct(ptr::null());
+    pub fn open() -> Result<Display, &'static str> {
+        Display::open_direct(None)
     }
     pub(super) fn xlib_display(&self) -> *mut xlib::Display {
-        *self.d
+        self.d.ptr()
     }
     pub(super) fn pointer_direct(&self, w: &Window) -> Result<Pointer, &'static str> {
         let mut root = 0;
@@ -150,7 +131,7 @@ impl Display {
         let mut id = 0;
         let mut revert = 0;
         let ok = unsafe {
-            xlib::XGetInputFocus(*self.d, &mut id, &mut revert) > 0
+            xlib::XGetInputFocus(self.d.ptr(), &mut id, &mut revert) > 0
         };
         if ok {
             const NONE: u64 = 0; /* xlib::None, which is commented out for no reason */
@@ -166,7 +147,7 @@ impl Display {
     }
     pub fn atom(&self, name: &str) -> Result<Atom, &'static str> {
         let cs = try!(
-            ffi::CString::new(name)
+            stdffi::CString::new(name)
                 .map_err(|_| "CString::new() failed")
         );
         let atom = unsafe {

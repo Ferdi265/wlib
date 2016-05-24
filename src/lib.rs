@@ -1,8 +1,8 @@
-#![feature(pub_restricted, unique, associated_consts)]
+#![feature(pub_restricted, unique, shared, associated_consts)]
 
 extern crate x11;
 
-mod ffi;
+pub mod ffi;
 pub mod display;
 pub mod screen;
 pub mod window;

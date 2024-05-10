@@ -24,18 +24,24 @@ impl<'d> Window<'d> {
         let mut w = Window {
             w: id,
             d: d,
+            // SAFETY: zeroed XWindowAttributes are valid
             attrs: unsafe {
                 mem::zeroed()
             }
         };
         w.update().map(|_| w)
     }
+
     fn get_attrs(&self) -> Result<xlib::XWindowAttributes, &'static str> {
+        // SAFETY: zeroed XWindowAttributes are valid
         let mut attrs = unsafe {
             mem::zeroed()
         };
+        // SAFETY: display is valid
         let ok = unsafe {
-            xlib::XGetWindowAttributes(self.d.xlib_display(), self.w.into(), &mut attrs) == 1
+            xlib::XGetWindowAttributes(
+                self.d.xlib_display(), self.w.into(), &mut attrs
+            ) == 1
         };
         if ok {
             Ok(attrs)
@@ -43,6 +49,7 @@ impl<'d> Window<'d> {
             Err("XGetWindowAttributes() failed")
         }
     }
+
     /// Updates the window
     ///
     /// Gets the window attributes, useful if the window has moved or was
@@ -59,6 +66,7 @@ impl<'d> Window<'d> {
             Err(e) => Err(e)
         }
     }
+
     /// Moves the window
     ///
     /// Moves the window to the coordinates `x` and `y`.
@@ -71,6 +79,7 @@ impl<'d> Window<'d> {
         c.y(y);
         self.change(&c)
     }
+
     /// Moves the window relatively
     ///
     /// Moves the window by `x` pixels horizontally and `y` pixels vertically.
@@ -83,6 +92,7 @@ impl<'d> Window<'d> {
         c.y(self.y() + y);
         self.change(&c)
     }
+
     /// Resizes the window
     ///
     /// Resizes the window to width `w` and height `h`.
@@ -95,6 +105,7 @@ impl<'d> Window<'d> {
         c.height(h);
         self.change(&c)
     }
+
     /// Resizes the window relatively
     ///
     /// Resizes the window by `w` pixels horizontally and `h` pixels
@@ -108,6 +119,7 @@ impl<'d> Window<'d> {
         c.height((self.height() as i32 + h) as u32);
         self.change(&c)
     }
+
     /// Resizes the window border
     ///
     /// Resizes the window border to `b` pixels
@@ -119,6 +131,7 @@ impl<'d> Window<'d> {
         c.border_width(b);
         self.change(&c)
     }
+
     /// Changes the window's position on the stack
     ///
     /// Changes window position to the top or bottom of the stack, or inverts
@@ -131,6 +144,7 @@ impl<'d> Window<'d> {
         c.stack(m);
         self.change(&c)
     }
+
     /// Changes the window border color
     ///
     /// Changes the window border to the color `color`
@@ -142,6 +156,7 @@ impl<'d> Window<'d> {
         c.border_color(color);
         self.change(&c)
     }
+
     /// Changes ignore state for this window
     ///
     /// Sets or unsets override_redirect for this window
@@ -153,10 +168,12 @@ impl<'d> Window<'d> {
         c.ignore(ignore);
         self.change(&c)
     }
+
     /// Maps the window
     ///
     /// Returns an error message if the call to `XMapWindow()` failed.
     pub fn map(&mut self) -> Result<(), &'static str> {
+        // SAFETY: display is valid
         let ok = unsafe {
             xlib::XMapWindow(self.d.xlib_display(), self.w.into()) == 1
         };
@@ -166,10 +183,12 @@ impl<'d> Window<'d> {
             Err("XMapWindow() failed")
         }
     }
+
     /// Unmaps the window
     ///
     /// Returns an error message if the call to `XUnmapWindow()` failed.
     pub fn unmap(&mut self) -> Result<(), &'static str> {
+        // SAFETY: display is valid
         let ok = unsafe {
             xlib::XUnmapWindow(self.d.xlib_display(), self.w.into()) == 1
         };
@@ -179,6 +198,7 @@ impl<'d> Window<'d> {
             Err("XUnmapWindow() failed")
         }
     }
+
     /// Changes window properties in batch
     ///
     /// Takes a `Changes` and calls `xlib` functions to apply these changes.
@@ -193,8 +213,12 @@ impl<'d> Window<'d> {
     pub fn change(&mut self, c: &Changes) -> Result<(), &'static str> {
         Ok(()).and_then(|_| {
             let mut attrs = c.attrs;
+            // SAFETY: display and window attributes are valid
             let ok = unsafe {
-                xlib::XChangeWindowAttributes(self.d.xlib_display(), self.id().into(), c.amask, &mut attrs) == 1
+                xlib::XChangeWindowAttributes(
+                    self.d.xlib_display(), self.id().into(),
+                    c.amask, &mut attrs
+                ) == 1
             };
             if ok {
                 Ok(())
@@ -203,8 +227,12 @@ impl<'d> Window<'d> {
             }
         }).and_then(|_| {
             let mut changes = c.changes;
+            // SAFETY: display and changes are valid
             let ok = unsafe {
-                xlib::XConfigureWindow(self.d.xlib_display(), self.id().into(), c.cmask as u32, &mut changes) == 1
+                xlib::XConfigureWindow(
+                    self.d.xlib_display(), self.id().into(),
+                    c.cmask as u32, &mut changes
+                ) == 1
             };
             if ok {
                 Ok(())
@@ -213,12 +241,14 @@ impl<'d> Window<'d> {
             }
         }).and_then(|_| self.update())
     }
+
     /// Destroys the window
     ///
     /// Returns an error message if the call to `XDestroyWindow()` failed. If
     /// this call succeeds, the window should not exist any more and subsequent
     /// method calls on the window will return errors.
     pub fn destroy(&mut self) -> Result<(), &'static str> {
+        // SAFETY: display is valid and future calls will error but not be UB
         let ok = unsafe {
             xlib::XDestroyWindow(self.d.xlib_display(), self.id().into()) > 0
         };
@@ -228,12 +258,14 @@ impl<'d> Window<'d> {
             Err("XDestroyWindow() failed")
         }
     }
+
     /// Destroys the window and kills the controlling client
     ///
     /// Returns an error message if the call to `XKillClient()` failed. If this
     /// call succeeds, the window should not exist any more and subsequent
     /// method calls on the window will return errors.
     pub fn kill(&mut self) -> Result<(), &'static str> {
+        // SAFETY: display is valid and future calls will error but not be UB
         let ok = unsafe {
             xlib::XKillClient(self.d.xlib_display(), self.id().into()) > 0
         };
@@ -243,12 +275,14 @@ impl<'d> Window<'d> {
             Err("XDestroyWindow() failed")
         }
     }
+
     /// Focuses the window
     ///
     /// Passes `RevertToPointerRoot` and `CurrentTime`.
     ///
     /// Returns an error message if the call to `XSetInputFocus()` failed.
     pub fn focus(&self) -> Result<(), &'static str> {
+        // SAFETY: display is valid
         let ok = unsafe {
             xlib::XSetInputFocus(self.d.xlib_display(), self.id().into(), xlib::RevertToPointerRoot, xlib::CurrentTime) > 0
         };
@@ -258,6 +292,7 @@ impl<'d> Window<'d> {
             Err("XSetInputFocus() failed")
         }
     }
+
     /// Returns the children of the window
     ///
     /// Returns an error message if the call to `XQueryTree()` failed or if it
@@ -268,6 +303,7 @@ impl<'d> Window<'d> {
             let mut _i = (0, 0);
             let mut n = 0;
             let mut ws = ptr::null_mut();
+            // SAFETY: display is valid
             let ok = unsafe {
                 xlib::XQueryTree(self.d.xlib_display(), self.id().into(), &mut _i.0, &mut _i.1, &mut ws, &mut n) > 0
             };
@@ -288,31 +324,38 @@ impl<'d> Window<'d> {
                     slice::from_raw_parts(ws, n as usize)
                 };
                 for w in windows {
-                    let w = try!(Window::new(self.d, (*w).into()));
+                    let w = Window::new(self.d, (*w).into())?;
                     children.push(w);
                 }
                 Ok(children)
             }
         })
     }
+
     /// Gets the screen this window is in
     pub fn screen(&self) -> Screen<'d> {
-        Screen::new(self.d, unsafe { ptr::Unique::new(self.attrs.screen) })
+        // SAFETY: the screen in the window properties is never null
+        // the screen is also properly constrained by the display lifetime
+        unsafe { Screen::new_unchecked(self.d, ptr::NonNull::new_unchecked(self.attrs.screen)) }
     }
+
     pub(super) fn pointer_direct(&self) -> Result<display::Pointer, &'static str> {
         self.d.pointer_direct(self)
     }
+
     /// Gets the pointer coordinates relative to this window.
     ///
     /// Returns an error if the call to `XQueryPointer()` failed.
     pub fn pointer(&self) -> Result<shapes::Point, &'static str> {
-        let ptr = try!(self.pointer_direct());
+        let ptr = self.pointer_direct()?;
         ptr.wpos.ok_or("window not on same screen as pointer")
     }
+
     /// Moves the pointer relative to this window.
     ///
     /// Returns an error if the call to `XWarpPointer()` failed.
     pub fn warp_pointer(&self, p: shapes::Point) -> Result<(), &'static str> {
+        // SAFETY: display is valid
         let ok = unsafe {
             xlib::XWarpPointer(self.d.xlib_display(), 0 /* xlib::None */, self.id().into(), 0, 0, 0, 0, p.x, p.y) > 0
         };
@@ -322,6 +365,7 @@ impl<'d> Window<'d> {
             Err("XWarpPointer() failed")
         }
     }
+
     /// Checks if the window still exists
     ///
     /// Calls `XGetWindowAttributes()` and throws away the result.
@@ -334,53 +378,68 @@ impl<'d> Window<'d> {
             Err(_) => false
         }
     }
+
     pub fn id(&self) -> ID {
         self.w
     }
+
     pub fn x(&self) -> i32 {
         self.attrs.x
     }
+
     pub fn y(&self) -> i32 {
         self.attrs.y
     }
+
     pub fn width(&self) -> u32 {
         self.attrs.width as u32
     }
+
     pub fn height(&self) -> u32 {
         self.attrs.height as u32
     }
+
     pub fn border_width(&self) -> u32 {
         self.attrs.border_width as u32
     }
+
     pub fn frame_position(&self) -> shapes::Point {
         shapes::Point::new(self.x(), self.y())
     }
+
     pub fn frame_size(&self) -> shapes::Rectangle {
         shapes::Rectangle::new(self.width() + self.border_width() * 2, self.height() + self.border_width() * 2)
     }
+
     pub fn frame(&self) -> shapes::PositionedRectangle {
         let p = self.frame_position();
         let r = self.frame_size();
         shapes::PositionedRectangle::new(p.x, p.y, r.w, r.h)
     }
+
     pub fn content_position(&self) -> shapes::Point {
         let bw = self.border_width() as i32;
         self.frame_position() + shapes::Point::new(bw, bw)
     }
+
     pub fn content_size(&self) -> shapes::Rectangle {
         shapes::Rectangle::new(self.width(), self.height())
     }
+
     pub fn content(&self) -> shapes::PositionedRectangle {
         let p = self.content_position();
         let r = self.content_size();
         shapes::PositionedRectangle::new(p.x, p.y, r.w, r.h)
     }
+
     pub fn ignored(&self) -> bool {
         self.attrs.override_redirect == 1
     }
+
     pub fn visible(&self) -> bool {
         self.attrs.map_state == xlib::IsViewable
     }
+
     pub fn mapped(&self) -> bool {
         self.attrs.map_state != xlib::IsUnmapped
     }

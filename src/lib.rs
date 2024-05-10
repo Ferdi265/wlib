@@ -1,5 +1,3 @@
-#![feature(pub_restricted, unique, associated_consts)]
-
 extern crate x11;
 
 pub mod display;
